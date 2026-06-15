@@ -12,14 +12,37 @@ export default async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get("host") || "";
 
+  // 1. Always update session first to get auth cookies and user
+  let response = NextResponse.next();
+  const sessionData = await updateSession(req, response);
+  response = sessionData.response;
+  const user = sessionData.user;
+
   const isLocalhost = hostname.includes("localhost") || hostname.includes("127.0.0.1");
   const rootDomain = isLocalhost ? "localhost:3000" : "yoursaas.com";
   const adminDomain = isLocalhost ? "admin.localhost:3000" : "admin.yoursaas.com";
 
+  // Extract tenant from path if using localhost folder structure (e.g., localhost:3000/blueate/admin)
+  const pathSegments = url.pathname.split('/').filter(Boolean);
+  const isTenantPath = pathSegments.length > 0 && pathSegments[0] !== "api" && pathSegments[0] !== "_next";
+  const isLoginPage = url.pathname.endsWith("/login");
+
+  // Enforce auth on tenant paths
+  if (!user && isTenantPath && !isLoginPage) {
+    const tenant = pathSegments[0];
+    return NextResponse.redirect(new URL(`/${tenant}/login`, req.url));
+  }
+
   // Bypass rewrite for the root domain or the super admin domain
-  if (hostname === rootDomain || hostname === adminDomain) {
-    let response = NextResponse.next();
-    return await updateSession(req, response);
+  if (hostname === rootDomain) {
+    return response;
+  }
+  
+  if (hostname === adminDomain) {
+    if (!user && url.pathname !== "/login") {
+      return NextResponse.redirect(new URL(`http://${rootDomain}/login`, req.url));
+    }
+    return response;
   }
 
   let currentHost = hostname.replace(`.${rootDomain}`, "");
@@ -29,13 +52,16 @@ export default async function middleware(req: NextRequest) {
   }
 
   if (currentHost === hostname || currentHost === "localhost") {
-    let response = NextResponse.next();
-    return await updateSession(req, response);
+    return response;
   }
 
-  // Create the rewrite response for the tenant
-  let response = NextResponse.rewrite(new URL(`/(platform)/${currentHost}${url.pathname}`, req.url));
+  // Create the rewrite response for the tenant (route groups like (platform) should not be included in the rewrite path)
+  let rewriteResponse = NextResponse.rewrite(new URL(`/${currentHost}${url.pathname}`, req.url));
   
-  // Pass the rewrite response through the Supabase session updater
-  return await updateSession(req, response);
+  // Copy all Supabase cookies from the initial session response to the rewrite response
+  response.cookies.getAll().forEach(cookie => {
+    rewriteResponse.cookies.set(cookie.name, cookie.value);
+  });
+  
+  return rewriteResponse;
 }

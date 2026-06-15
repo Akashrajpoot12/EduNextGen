@@ -47,17 +47,29 @@ export function useTenant() {
   return useContext(TenantContext);
 }
 
+import { TenantSidebar } from "@/components/tenant-sidebar";
+import { GlobalTopbar } from "@/components/global-topbar";
+
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   return (
     <TenantProvider>
-      <div className="min-h-screen flex flex-col">
-        {/* Placeholder for tenant-specific universal top navigation or sidebar */}
-        <header className="bg-slate-900 text-white p-4">
-          <div className="container mx-auto">
-            Tenant Header - Loaded via Domain Routing
-          </div>
-        </header>
-        <main className="flex-1 container mx-auto p-4">{children}</main>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <TenantSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Subtle gradient orb behind main content */}
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none dark:mix-blend-screen" />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none dark:mix-blend-screen" />
+
+          {/* Top navigation / header area */}
+          <GlobalTopbar />
+          
+          {/* Scrollable Main Content */}
+          <main className="flex-1 overflow-y-auto bg-background/50">
+            <div className="max-w-6xl mx-auto p-4 md:p-6">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
     </TenantProvider>
   );

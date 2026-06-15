@@ -1,48 +1,54 @@
-# Multi-Tenant SaaS School Management ERP
+# Edunest: Multi-Tenant SaaS School Management ERP
 
-This repository contains the source code for an enterprise-grade, multi-tenant School Management System (ERP). The platform is designed to securely host hundreds of independent schools using advanced PostgreSQL Row-Level Security (RLS) and cutting-edge AI features.
+This repository contains the source code for an enterprise-grade, real-world School Management System (ERP). The platform is designed to securely host hundreds of independent schools using advanced PostgreSQL Multi-Tenancy (Row Level Security), AI Biometric Attendance, and Subdomain Routing.
 
----
+## 🚀 Features Built So Far (Project Status)
 
-## 🚀 Project Architecture & Completed Features
+### 1. Advanced Multi-Tenant Subdomain Routing (Next.js 16)
+- **Dynamic Tenant Resolution:** Built a powerful Next.js Middleware that automatically detects subdomains (e.g., `gems.edunest.com`) and securely routes traffic to the specific school's data.
+- **Root Domain Bypass:** Configured the routing engine to bypass the marketing site and point specific traffic to the `super-admin` global dashboard.
+- **Auth Collision Fix:** Engineered a robust workaround for Supabase SSR cookies overwriting Next.js rewrites, ensuring perfectly stable Hot Module Reloads (HMR).
 
-We have successfully executed the master 7-Phase architectural blueprint, transforming this repository into a production-ready SaaS product.
+### 2. Marketing Website & Self-Serve Registration
+- **High-Impact Landing Page:** Built a stunning marketing page (`app/(root)/page.tsx`) with Framer Motion animations.
+- **Real-World Pricing Tiers:** Implemented the exact Edunest business logic with Monthly/Yearly toggles for Free, Silver (₹999), Gold (₹1,999), and Platinum (₹3,499) plans.
+- **SaaS Onboarding Flow:** Created a multi-step registration form using `react-hook-form` and strict `zod` validation to ensure subdomains and school details are properly formatted before provisioning.
 
-### ✅ Phase 1: Database Schema & Tenant Isolation
-The foundational PostgreSQL database architecture has been successfully locked down (located in `supabase/migrations/`).
-* **Multi-Tenant Schema Generated**: Hierarchical tables created (`registration_requests` -> `schools` -> `academic_years` -> `classes` -> `users` -> `user_roles` -> `students` -> `daily_attendance`).
-* **Absolute Data Security**: Strict Supabase Row-Level Security (RLS) policies have been written so that a school can only ever query data matching their exact `school_id`.
-* **Self-Serve Automation**: Written PostgreSQL database triggers that automatically create the school tenant and assign the `school_admin` role the moment a Super Admin clicks "Approve".
+### 3. Live Supabase Database Architecture (PostgreSQL)
+We fully deployed four massive SQL schemas directly to the live Supabase cloud:
+- **`00001_initial_schema.sql`**: Configured global tables for `schools`, `users`, `students`, `classes`, and `attendance` with bulletproof **Row Level Security (RLS)**.
+- **`00002_biometric_matching.sql`**: Deployed `pgvector` extensions to store AI Face Embeddings and wrote an optimized PostgreSQL RPC function (`match_student_face`) to instantly recognize student faces via cosine similarity.
+- **`00003_subscription_billing.sql`**: Added Stripe Customer IDs and student quotas to automate billing logic.
+- **`00004_edunest_core_modules.sql`**: Expanded the database to handle the full ERP suite: `homework`, `exams`, `timetables`, `announcements`, and `leave_applications`.
 
-### ✅ Phase 2: Frontend Scaffolding & Multi-Tenant Routing
-* **Subdomain Routing Middleware**: Developed a critical `middleware.ts` engine. It intercepts the incoming request (e.g., `school-a.yoursaas.com`), and silently rewrites the path to serve the correct tenant dashboard seamlessly.
-* **Global Tenant Context**: Built the `TenantProvider` layout that reads the extracted URL parameter, validates the school against Supabase, and cascades the current `school_id` down to all nested React components.
-
-### ✅ Phase 3: Authentication & Multi-Role Setup
-* **Supabase SSR Clients**: Configured fully robust `server.ts`, `client.ts`, and `middleware.ts` utilities for managing session cookies.
-* **Role-Based Login Engine**: Created a beautifully styled Shadcn login portal that attempts authentication and is staged to check the `user_roles` bridging table to dynamically route to the Super Admin, School Admin, Teacher, or Parent dashboards.
-
-### ✅ Phase 4: Core Dashboards
-* **Super Admin Portal**: Global tracking for active hardware biometric scanners, MRR, and school registration requests.
-* **School Admin Portal**: Tenant-isolated metrics showing total students, pending fees, and active classes.
-* **Teacher Portal**: Live attendance metrics and pending gradebook assignments.
-
-### ✅ Phase 5: The Bulk CSV Migration Engine
-* **Client-Side Parsing**: Integrated `papaparse` directly into the frontend to parse heavy Excel/CSV spreadsheets directly in the browser.
-* **Dynamic Upload Tool**: The `CsvUploader` allows School Admins to upload hundreds of student records instantly and sync them into the `students` table.
-
-### ✅ Phase 6: AI Biometric & Real-Time Implementation
-* **pgvector Facial Recognition**: Built the `match_student_face` RPC in SQL that utilizes `vector(128)` to measure cosine similarity (`<=>`) between incoming hardware face scans and the database.
-* **Real-Time WebSockets**: Implemented `LiveAttendance` via `supabase.channel('postgres_changes')` to instantly update the teacher's dashboard UI the exact second a student is marked present by the biometric API.
-
-### ✅ Phase 7: Monetization & Security Gates
-* **Stripe Webhook Interceptor**: Configured `/api/webhooks/stripe` to detect `payment_failed` events and instantly demote a school's status to `past_due`, freezing their platform access.
-* **Automated Quota Enforcement**: Implemented the `/api/tenant/quota` edge function that blocks massive CSV ingestions if a school exceeds their paid student tier limit.
+### 4. Beautiful UI Dashboards & Portals
+- **The Super Admin Dashboard (`/super-admin`)**: A command center for the SaaS owner to track Total MRR, Active Biometric Scanners, and approve pending school registrations.
+- **The School Admin Portal (`/admin`)**: A customized tenant dashboard displaying active classes, pending fees, total students, and a custom **CSV Uploader component** to migrate legacy student data.
+- **Enterprise ERP Sidebar:** We replaced the basic navigation with a massive Sidebar housing all 21 Edunest features (Homework, Exams, Payroll, Transport, Face AI, Inventory, etc.).
+- **The Teacher Biometric Portal (`/teacher`)**: A high-tech dashboard for teachers featuring a live webcam scanner to automate student attendance using face recognition.
 
 ---
 
-## 🛠 Tech Stack
+## 🛠️ Tech Stack
+- **Frontend**: Next.js 16 (App Router), React, Tailwind CSS, Framer Motion, Shadcn UI
+- **Backend**: Next.js Server Actions & API Routes
+- **Database**: Supabase (PostgreSQL, pgvector, Row Level Security)
+- **Forms & Validation**: React Hook Form + Zod
+- **Authentication**: Supabase SSR Auth
 
-* **Frontend**: Next.js 15 (App Router), React, TypeScript, Tailwind CSS, Shadcn UI
-* **Backend Backend/Auth**: Supabase (PostgreSQL, Auth, Realtime, pgvector)
-* **API Endpoints**: Next.js Serverless Route Handlers
+## 💻 How to Run Locally
+
+Because we use Subdomain Routing, you must access the platform using Localhost subdomains!
+
+1. Start the server:
+```bash
+cd web
+npm run dev
+```
+
+2. Open these exact URLs in your browser to test the routing:
+- **Marketing Site:** `http://localhost:3000`
+- **Super Admin:** `http://admin.localhost:3000/super-admin`
+- **School Admin:** `http://gems.localhost:3000/admin`
+
+*(Next.js will automatically route `gems` to the `[tenant]` folder structure and isolate the UI!)*
