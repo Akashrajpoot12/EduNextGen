@@ -3,13 +3,12 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, TrendingUp, Users, DollarSign, Activity } from "lucide-react";
 
 export function AnalyticsPage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
+  const { tenantId: schoolId } = useTenant();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalStudents: 0,

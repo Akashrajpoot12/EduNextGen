@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,7 @@ import { Loader2, Plus, Users, GraduationCap, CalendarDays } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 
 export function ClassesPage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
+  const { tenantId: schoolId } = useTenant();
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

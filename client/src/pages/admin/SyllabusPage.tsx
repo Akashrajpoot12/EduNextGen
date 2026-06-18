@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,13 +14,11 @@ import { Loader2, Plus, LayoutList, Search, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function SyllabusPage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
+  const { tenantId: schoolId } = useTenant();
   const [syllabi, setSyllabi] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [schoolId, setSchoolId] = useState("");
   
   // Form State
   const [classId, setClassId] = useState("");

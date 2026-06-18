@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,15 +17,13 @@ const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "S
 const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export function TimetablePage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
-  
+  const { tenantId: schoolId } = useTenant();
+
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [timetable, setTimetable] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [schoolId, setSchoolId] = useState("");
   
   // Selection
   const [selectedClassId, setSelectedClassId] = useState<string>("");

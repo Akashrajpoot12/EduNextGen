@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Zap, Shield, Crown, Blocks, MessageSquare, Globe, CreditCard } from "lucide-react";
@@ -20,8 +20,7 @@ const loadRazorpayScript = () => {
 };
 
 export function SubscriptionPage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
+  const { tenantId: tenant } = useTenant();
 
   const [activePlan, setActivePlan] = useState<string>("basic");
   const [activeAddons, setActiveAddons] = useState<string[]>([]);

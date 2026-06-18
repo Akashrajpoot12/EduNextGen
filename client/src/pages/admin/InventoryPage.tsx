@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,10 @@ import { Loader2, Search, PackageOpen, Plus, Settings2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function InventoryPage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
+  const { tenantId: schoolId } = useTenant();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [schoolId, setSchoolId] = useState("");
   
   // Form State
   const [itemName, setItemName] = useState("");

@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,9 @@ import { Loader2, Search, CalendarOff, CheckCircle2, XCircle } from "lucide-reac
 import { motion, AnimatePresence } from "framer-motion";
 
 export function LeavesPage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
+  const { tenantId: schoolId } = useTenant();
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [schoolId, setSchoolId] = useState("");
 
   const supabase = createClient();
 

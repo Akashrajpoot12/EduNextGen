@@ -1,209 +1,283 @@
-// @ts-nocheck
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { GraduationCap, Search, Plus, Loader2, Mail } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useTenant } from "@/components/layout/DashboardLayout";
+import { Plus, X, Search, GraduationCap, Mail, Phone, Copy, Eye, EyeOff, Trash2 } from "lucide-react";
+
+type Teacher = {
+  id: string; name: string; email: string; phone?: string;
+  subject?: string; qualification?: string; department?: string;
+  joining_date?: string; role: string;
+};
+
+const SUBJECTS = ["Mathematics", "Science", "English", "Hindi", "Social Science", "Physics", "Chemistry", "Biology", "Computer Science", "Physical Education", "Art", "Music", "Other"];
+const DEPARTMENTS = ["Science", "Commerce", "Arts", "Mathematics", "Languages", "Physical Education", "Other"];
+
+const EMPTY = {
+  name: "", email: "", phone: "", subject: "", qualification: "",
+  department: "", joining_date: "", tempPassword: "",
+};
+
+function genPassword() {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#";
+  return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 export function TeachersDirectory() {
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [schoolId, setSchoolId] = useState("");
-  
-  // Form State
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const params = useParams();
-  const tenant = params.tenantId as string;
   const supabase = createClient();
+  const { tenantId: schoolId } = useTenant();
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchTeachers = async () => {
-      if (isMounted) setLoading(true);
-      const { data: schoolData } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
+  const [teachers, setTeachers]       = useState<Teacher[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [showForm, setShowForm]       = useState(false);
+  const [form, setForm]               = useState({ ...EMPTY, tempPassword: genPassword() });
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState("");
+  const [search, setSearch]           = useState("");
+  const [showPass, setShowPass]       = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
 
-      if (!schoolData) {
-        if (isMounted) setLoading(false);
-        return;
-      }
-      if (isMounted) setSchoolId(schoolData.id);
+  async function fetchTeachers() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("users")
+      .select("id, name, email, phone, subject, qualification, department, joining_date, role")
+      .eq("school_id", schoolId)
+      .eq("role", "teacher")
+      .order("name");
+    setTeachers(data || []);
+    setLoading(false);
+  }
 
-      const { data: teachersData } = await supabase
-        .from('user_roles')
-        .select('user_id, role, users(id, email, full_name, created_at)')
-        .eq('school_id', schoolData.id)
-        .eq('role', 'teacher')
-        .order('user_id', { ascending: false });
+  useEffect(() => { if (schoolId) fetchTeachers(); }, [schoolId]);
 
-      if (teachersData && isMounted) {
-        const formattedTeachers = teachersData.map((tr: any) => {
-           const user = tr.users || {};
-           const nameParts = (user.full_name || "Unknown Teacher").split(" ");
-           return {
-              id: user.id,
-              email: user.email,
-              role: tr.role,
-              first_name: nameParts[0],
-              last_name: nameParts.slice(1).join(" ") || "",
-              created_at: user.created_at
-           };
-        });
-        setTeachers(formattedTeachers);
-      }
-      if (isMounted) setLoading(false);
-    };
-
-    fetchTeachers();
-    return () => { isMounted = false; };
-  }, [tenant]);
-
-  const handleAddTeacher = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    try {
-      // MOCKED: Needs Supabase Edge Function to use admin auth securely
-      alert("Note: Provisioning teachers requires a Backend API (Edge Function) in Vite to securely bypass RLS. This feature will be built in the backend phase.");
-      setIsDialogOpen(false);
-    } catch (error: any) {
-      console.error("Error adding teacher:", error);
-      alert(`Failed to add teacher: ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
+  async function handleAdd() {
+    if (!form.name || !form.email || !form.tempPassword) {
+      setError("Name, email aur password required hai."); return;
     }
-  };
+    setSaving(true);
+    setError("");
+    try {
+      // 1. Create Supabase Auth user
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.tempPassword,
+        options: { data: { full_name: form.name } },
+      });
+      if (authErr) throw new Error(authErr.message);
+      if (!authData.user) throw new Error("User creation failed.");
+
+      const uid = authData.user.id;
+
+      // 2. Upsert into users table
+      const { error: uErr } = await supabase.from("users").upsert({
+        id: uid, email: form.email, full_name: form.name, name: form.name,
+        school_id: schoolId, role: "teacher",
+        phone: form.phone || null, subject: form.subject || null,
+        qualification: form.qualification || null, department: form.department || null,
+        joining_date: form.joining_date || null,
+      }, { onConflict: "id" });
+      if (uErr) throw new Error(uErr.message);
+
+      // 3. Insert user_role for backward compat
+      await supabase.from("user_roles").upsert(
+        { user_id: uid, school_id: schoolId, role: "teacher" },
+        { onConflict: "user_id,school_id,role" }
+      );
+
+      setCreatedCreds({ email: form.email, password: form.tempPassword });
+      setShowForm(false);
+      setForm({ ...EMPTY, tempPassword: genPassword() });
+      fetchTeachers();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string, email: string) {
+    if (!confirm(`Delete teacher ${email}? This cannot be undone.`)) return;
+    await supabase.from("users").delete().eq("id", id);
+  }
+
+  const filtered = teachers.filter(t =>
+    !search || t.name?.toLowerCase().includes(search.toLowerCase()) ||
+    t.email?.toLowerCase().includes(search.toLowerCase()) ||
+    t.subject?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const f = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Teachers Directory</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage your teaching staff, schedules, and assignments.</p>
+          <h1>Teachers Directory</h1>
+          <p>Manage teaching staff, assign subjects and classes</p>
         </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
-              <Plus className="w-4 h-4 mr-2" /> Add Teacher
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Add New Teacher</DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Securely provision a new Teacher role in the database under your school.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddTeacher} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="bg-slate-950 border-white/10 text-white" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="bg-slate-950 border-white/10 text-white" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-950 border-white/10 text-white" />
-              </div>
-              <DialogFooter className="pt-4">
-                <Button type="submit" disabled={isSubmitting} className="bg-emerald-500 hover:bg-emerald-600 text-white w-full">
-                  {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  Provision Teacher
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <button type="button"
+          onClick={() => { setForm({ ...EMPTY, tempPassword: genPassword() }); setError(""); setShowForm(true); }}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90">
+          <Plus className="w-4 h-4" /> Add Teacher
+        </button>
       </div>
 
-      <div className="flex gap-4 items-center">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <Input placeholder="Search staff by name or email..." className="pl-9 bg-slate-900/50 border-white/10 text-white" />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center p-12">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
-        </div>
-      ) : teachers.length === 0 ? (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-              <GraduationCap className="w-8 h-8 text-slate-400" />
+      {/* Created credentials banner */}
+      {createdCreds && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-5 flex items-start justify-between">
+          <div>
+            <p className="font-semibold text-green-800 text-sm">Teacher account created successfully!</p>
+            <p className="text-sm text-green-700 mt-1">Share these login credentials with the teacher:</p>
+            <div className="mt-2 font-mono text-sm bg-white border border-green-200 rounded-lg px-3 py-2 inline-block">
+              <span className="text-gray-600">Email:</span> <strong>{createdCreds.email}</strong><br />
+              <span className="text-gray-600">Password:</span> <strong>{createdCreds.password}</strong>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No teachers found</h3>
-            <p className="text-slate-400 mb-6 max-w-sm">Get started by adding your first teacher.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-slate-300">
-              <thead className="text-xs uppercase bg-slate-950/50 text-slate-400 border-b border-white/5">
-                <tr>
-                  <th className="px-6 py-4">Name</th>
-                  <th className="px-6 py-4">Email / Login ID</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <AnimatePresence>
-                  {teachers.map((teacher) => (
-                    <motion.tr 
-                      key={teacher.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-medium text-white flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold mr-3 border border-emerald-500/30">
-                          {teacher.first_name?.[0] || ""}{teacher.last_name?.[0] || ""}
-                        </div>
-                        {teacher.first_name} {teacher.last_name}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center text-slate-400">
-                          <Mail className="w-4 h-4 mr-2" /> {teacher.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          {teacher.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button variant="ghost" size="sm" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">Schedule</Button>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
+            <button type="button"
+              onClick={() => navigator.clipboard.writeText(`Email: ${createdCreds.email}\nPassword: ${createdCreds.password}`)}
+              className="ml-3 text-xs text-green-700 underline flex items-center gap-1 mt-1">
+              <Copy className="w-3 h-3" /> Copy credentials
+            </button>
           </div>
-        </Card>
+          <button type="button" title="Dismiss" onClick={() => setCreatedCreds(null)}><X className="w-4 h-4 text-green-600" /></button>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-card rounded-xl p-4 border border-border shadow-sm card-accent-blue">
+          <div className="flex items-center gap-2"><GraduationCap className="w-4 h-4 text-blue-500" /><p className="text-xs text-muted-foreground">Total Teachers</p></div>
+          <p className="text-2xl font-bold">{teachers.length}</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 border border-border shadow-sm card-accent-green">
+          <p className="text-xs text-muted-foreground">Subjects Covered</p>
+          <p className="text-2xl font-bold">{new Set(teachers.map(t => t.subject).filter(Boolean)).size}</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 border border-border shadow-sm card-accent-purple">
+          <p className="text-xs text-muted-foreground">Departments</p>
+          <p className="text-2xl font-bold">{new Set(teachers.map(t => t.department).filter(Boolean)).size}</p>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, subject…"
+          className="pl-9 pr-4 py-2 border border-border rounded-lg text-sm bg-background w-80" />
+      </div>
+
+      {/* Table */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <table className="w-full edu-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Department</th><th>Phone</th><th>Joining Date</th><th>Actions</th></tr></thead>
+          <tbody>
+            {loading && <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading…</td></tr>}
+            {!loading && filtered.length === 0 && (
+              <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">
+                No teachers found. Click "Add Teacher" to add one.
+              </td></tr>
+            )}
+            {filtered.map(t => (
+              <tr key={t.id}>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                      {(t.name || "?")[0].toUpperCase()}
+                    </div>
+                    <span className="font-medium">{t.name}</span>
+                  </div>
+                </td>
+                <td>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Mail className="w-3.5 h-3.5" /> {t.email}
+                  </div>
+                </td>
+                <td className="text-sm">{t.subject || "—"}</td>
+                <td className="text-sm">{t.department || "—"}</td>
+                <td className="text-sm">
+                  {t.phone ? <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{t.phone}</span> : "—"}
+                </td>
+                <td className="text-sm">{t.joining_date ? new Date(t.joining_date).toLocaleDateString("en-IN") : "—"}</td>
+                <td>
+                  <button type="button" title="Delete teacher" onClick={() => handleDelete(t.id, t.email)}
+                    className="text-red-400 hover:text-red-600 p-1 rounded">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add Teacher Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-bold text-lg">Add New Teacher</h2>
+              <button type="button" title="Close" onClick={() => setShowForm(false)}><X className="w-5 h-5" /></button>
+            </div>
+
+            {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 mb-4">{error}</div>}
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-muted-foreground block mb-1">Full Name *</label>
+                  <input title="Full Name" placeholder="Raman Sharma" value={form.name} onChange={e => f("name", e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" /></div>
+                <div><label className="text-xs text-muted-foreground block mb-1">Email *</label>
+                  <input title="Email" type="email" placeholder="teacher@school.edu" value={form.email} onChange={e => f("email", e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" /></div>
+              </div>
+
+              <div><label className="text-xs text-muted-foreground block mb-1">Temporary Password *</label>
+                <div className="relative">
+                  <input title="Temporary Password" placeholder="Auto-generated password" type={showPass ? "text" : "password"} value={form.tempPassword} onChange={e => f("tempPassword", e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 pr-10 text-sm bg-background font-mono" />
+                  <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-3 top-2.5 text-muted-foreground">
+                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Share this password with the teacher. They can change it after first login.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-muted-foreground block mb-1">Phone</label>
+                  <input title="Phone" placeholder="9876543210" value={form.phone} onChange={e => f("phone", e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" /></div>
+                <div><label className="text-xs text-muted-foreground block mb-1">Joining Date</label>
+                  <input title="Joining Date" type="date" value={form.joining_date} onChange={e => f("joining_date", e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-muted-foreground block mb-1">Subject</label>
+                  <select title="Subject" value={form.subject} onChange={e => f("subject", e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background">
+                    <option value="">— Select —</option>
+                    {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+                  </select></div>
+                <div><label className="text-xs text-muted-foreground block mb-1">Department</label>
+                  <select title="Department" value={form.department} onChange={e => f("department", e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background">
+                    <option value="">— Select —</option>
+                    {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
+                  </select></div>
+              </div>
+              <div><label className="text-xs text-muted-foreground block mb-1">Qualification</label>
+                <input value={form.qualification} onChange={e => f("qualification", e.target.value)} placeholder="B.Ed, M.Sc., M.A…"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" /></div>
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-border rounded-lg text-sm">Cancel</button>
+              <button type="button" onClick={handleAdd} disabled={saving || !form.name || !form.email}
+                className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50">
+                {saving ? "Creating account…" : "Create Teacher Account"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
-
