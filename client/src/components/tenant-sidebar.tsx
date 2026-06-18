@@ -9,8 +9,13 @@ import {
   BookMarked, Banknote, Award, CalendarOff, Files,
   BarChart3, MessageSquare, Bus, UserPlus, Fingerprint,
   Wallet, Package, CreditCard, LogOut, Library, Heart,
-  Calendar, ChevronDown, ChevronRight, GraduationCapIcon,
-  TicketCheck, TrendingUp, Users2, CreditCard as CardIcon, BookMarked as LibCard, Receipt
+  Calendar, ChevronDown, ChevronRight,
+  TicketCheck, TrendingUp, Users2, BookMarked as LibCard, Receipt,
+  Send, IndianRupee, GraduationCap as AlumniIcon, BedDouble, Navigation, HelpCircle,
+  ClipboardList, BarChart2, UserCheck, KeyRound,
+  Landmark, CalendarCheck, ScrollText, MessageCircleWarning,
+  ReceiptText, Newspaper, BookCopy,
+  Building2, HeartHandshake, Megaphone
 } from "lucide-react";
 
 // ── Nav Categories ────────────────────────────────────────────────────────────
@@ -19,90 +24,143 @@ type NavGroup = { group: string; color: string; items: NavItem[] };
 
 function buildAdminRoutes(tenant: string): NavGroup[] {
   return [
+    // ── 1. Dashboard ─────────────────────────────────────────────
     {
-      group: "Overview",
+      group: "Dashboard",
       color: "text-indigo-500",
       items: [
-        { name: "Dashboard",      href: `/${tenant}/admin`,              icon: LayoutDashboard },
+        { name: "Overview",       href: `/${tenant}/admin`,              icon: LayoutDashboard },
         { name: "Analytics",      href: `/${tenant}/admin/analytics`,    icon: BarChart3 },
-        { name: "Announcements",  href: `/${tenant}/admin/announcements`,icon: Bell },
+        { name: "Calendar",       href: `/${tenant}/admin/calendar`,     icon: Calendar },
       ],
     },
+    // ── 2. Students ───────────────────────────────────────────────
+    {
+      group: "Students",
+      color: "text-sky-500",
+      items: [
+        { name: "All Students",    href: `/${tenant}/admin/students`,          icon: Users },
+        { name: "Admissions",      href: `/${tenant}/admin/admissions`,        icon: UserPlus },
+        { name: "Admission Reg.",  href: `/${tenant}/admin/admission-register`,icon: BookCopy },
+        { name: "Attendance",      href: `/${tenant}/admin/attendance`,        icon: CheckSquare },
+        { name: "Roll List",       href: `/${tenant}/admin/roll-list`,         icon: Files },
+        { name: "ID Cards",        href: `/${tenant}/admin/id-cards`,          icon: Award },
+        { name: "Class Promotion", href: `/${tenant}/admin/class-promotion`,   icon: TrendingUp },
+        { name: "Health Records",  href: `/${tenant}/admin/health`,            icon: Heart },
+        { name: "Gate Pass",       href: `/${tenant}/admin/gate-pass`,         icon: KeyRound },
+      ],
+    },
+    // ── 3. Academics ──────────────────────────────────────────────
     {
       group: "Academics",
       color: "text-emerald-500",
       items: [
-        { name: "Students",       href: `/${tenant}/admin/students`,     icon: Users },
-        { name: "Teachers",       href: `/${tenant}/admin/teachers`,     icon: GraduationCap },
-        { name: "Classes",        href: `/${tenant}/admin/classes`,      icon: BookMarked },
-        { name: "Attendance",     href: `/${tenant}/admin/attendance`,   icon: CheckSquare },
-        { name: "Timetable",      href: `/${tenant}/admin/timetable`,    icon: CalendarDays },
-        { name: "Homework",       href: `/${tenant}/admin/homework`,     icon: BookOpen },
+        { name: "Classes",        href: `/${tenant}/admin/classes`,        icon: BookMarked },
+        { name: "Teachers",       href: `/${tenant}/admin/teachers`,       icon: GraduationCap },
+        { name: "Timetable",      href: `/${tenant}/admin/timetable`,      icon: CalendarDays },
+        { name: "Syllabus",       href: `/${tenant}/admin/syllabus`,       icon: BookOpen },
+        { name: "Homework",       href: `/${tenant}/admin/homework`,       icon: BookOpen },
         { name: "Exams & Marks",  href: `/${tenant}/admin/exams`,          icon: FileText },
-        { name: "Marks Analysis", href: `/${tenant}/admin/marks-analysis`, icon: TrendingUp },
+        { name: "Marks Analysis", href: `/${tenant}/admin/marks-analysis`, icon: BarChart2 },
+        { name: "Report Card",    href: `/${tenant}/admin/report-card`,    icon: BarChart3 },
         { name: "Hall Tickets",   href: `/${tenant}/admin/hall-tickets`,   icon: TicketCheck },
-        { name: "Syllabus",       href: `/${tenant}/admin/syllabus`,       icon: BookMarked },
-        { name: "Calendar",       href: `/${tenant}/admin/calendar`,       icon: Calendar },
+        { name: "Question Bank",  href: `/${tenant}/admin/question-bank`,  icon: HelpCircle },
+        { name: "Exam Date Sheet",href: `/${tenant}/admin/exam-datesheet`, icon: CalendarCheck },
         { name: "Certificates",   href: `/${tenant}/admin/certificates`,   icon: Award },
       ],
     },
+    // ── 4. Staff & HR ─────────────────────────────────────────────
+    {
+      group: "Staff & HR",
+      color: "text-blue-500",
+      items: [
+        { name: "Staff Directory", href: `/${tenant}/admin/staff`,             icon: UserSquare2 },
+        { name: "Staff Attendance",href: `/${tenant}/admin/staff-attendance`,  icon: CheckSquare },
+        { name: "Leave Requests",  href: `/${tenant}/admin/leaves`,            icon: CalendarOff },
+        { name: "Leave Balance",   href: `/${tenant}/admin/leave-balance`,     icon: CalendarCheck },
+        { name: "Payroll",         href: `/${tenant}/admin/payroll`,           icon: Wallet },
+        { name: "Biometric",       href: `/${tenant}/admin/biometric`,         icon: Fingerprint },
+        { name: "Duty Roster",     href: `/${tenant}/admin/duty-roster`,        icon: ClipboardList },
+      ],
+    },
+    // ── 5. Finance ────────────────────────────────────────────────
     {
       group: "Finance",
       color: "text-amber-500",
       items: [
-        { name: "Fee Management",   href: `/${tenant}/admin/fees`,            icon: Banknote },
-        { name: "Fee Challan",      href: `/${tenant}/admin/fee-challan`,     icon: Receipt },
-        { name: "Sibling Discount", href: `/${tenant}/admin/sibling-discount`,icon: Users2 },
-        { name: "Staff Payroll",    href: `/${tenant}/admin/payroll`,         icon: Wallet },
-        { name: "Ledger",           href: `/${tenant}/admin/ledger`,          icon: TrendingUp },
-        { name: "Subscription",     href: `/${tenant}/admin/subscription`,    icon: CreditCard },
+        { name: "Fee Management",  href: `/${tenant}/admin/fees`,             icon: Banknote },
+        { name: "Fee Challan",     href: `/${tenant}/admin/fee-challan`,      icon: Receipt },
+        { name: "Fee Receipt",     href: `/${tenant}/admin/fee-receipt`,      icon: ReceiptText },
+        { name: "Sibling Discount",href: `/${tenant}/admin/sibling-discount`, icon: Users2 },
+        { name: "Cheque Mgmt",     href: `/${tenant}/admin/cheque`,           icon: Landmark },
+        { name: "Online Payment",  href: `/${tenant}/admin/online-payment`,   icon: IndianRupee },
+        { name: "Ledger",          href: `/${tenant}/admin/ledger`,           icon: TrendingUp },
+        { name: "Subscription",    href: `/${tenant}/admin/subscription`,     icon: CreditCard },
       ],
     },
+    // ── 6. Office ─────────────────────────────────────────────────
     {
-      group: "Administration",
-      color: "text-blue-500",
+      group: "Office",
+      color: "text-violet-500",
       items: [
-        { name: "Staff",            href: `/${tenant}/admin/staff`,             icon: UserSquare2 },
-        { name: "Staff Attendance", href: `/${tenant}/admin/staff-attendance`, icon: CheckSquare },
-        { name: "Leave Mgmt",       href: `/${tenant}/admin/leaves`,            icon: CalendarOff },
-        { name: "Class Promotion",  href: `/${tenant}/admin/class-promotion`,   icon: GraduationCap },
-        { name: "ID Cards",         href: `/${tenant}/admin/id-cards`,          icon: Award },
-        { name: "Roll List",        href: `/${tenant}/admin/roll-list`,         icon: Files },
-        { name: "Parent Log",       href: `/${tenant}/admin/parent-log`,        icon: MessageSquare },
-        { name: "Admissions",     href: `/${tenant}/admin/admissions`,   icon: UserPlus },
-        { name: "Documents",      href: `/${tenant}/admin/documents`,    icon: Files },
-        { name: "Communication",  href: `/${tenant}/admin/communication`,icon: MessageSquare },
+        { name: "Announcements",  href: `/${tenant}/admin/announcements`,      icon: Bell },
+        { name: "Circulars",      href: `/${tenant}/admin/circulars`,          icon: Newspaper },
+        { name: "Transfer Cert.", href: `/${tenant}/admin/tc`,                 icon: ClipboardList },
+        { name: "Bonafide Cert.", href: `/${tenant}/admin/bonafide`,           icon: ScrollText },
+        { name: "Visitor Reg.",   href: `/${tenant}/admin/visitor-log`,        icon: UserCheck },
+        { name: "Complaint Reg.", href: `/${tenant}/admin/complaints`,         icon: MessageCircleWarning },
+        { name: "Documents",      href: `/${tenant}/admin/documents`,          icon: Files },
+        { name: "Communication",  href: `/${tenant}/admin/communication`,      icon: MessageSquare },
       ],
     },
+    // ── 7. Services ───────────────────────────────────────────────
     {
       group: "Services",
       color: "text-purple-500",
       items: [
-        { name: "Library",        href: `/${tenant}/admin/library`,        icon: Library },
-        { name: "Library Cards",  href: `/${tenant}/admin/library-cards`,  icon: LibCard },
-        { name: "Transport",      href: `/${tenant}/admin/transport`,      icon: Bus },
-        { name: "Bus Pass",       href: `/${tenant}/admin/bus-pass`,       icon: Bus },
-        { name: "Health Records", href: `/${tenant}/admin/health`,       icon: Heart },
-        { name: "Inventory",      href: `/${tenant}/admin/inventory`,    icon: Package },
-        { name: "Face AI",        href: `/${tenant}/admin/face-ai`,      icon: Fingerprint },
+        { name: "Library",        href: `/${tenant}/admin/library`,       icon: Library },
+        { name: "Library Cards",  href: `/${tenant}/admin/library-cards`, icon: LibCard },
+        { name: "Transport",      href: `/${tenant}/admin/transport`,     icon: Bus },
+        { name: "Bus Pass",       href: `/${tenant}/admin/bus-pass`,      icon: Bus },
+        { name: "GPS Tracking",   href: `/${tenant}/admin/gps-tracking`,  icon: Navigation },
+        { name: "Hostel",         href: `/${tenant}/admin/hostel`,        icon: BedDouble },
+        { name: "Inventory",      href: `/${tenant}/admin/inventory`,     icon: Package },
+        { name: "Face AI",        href: `/${tenant}/admin/face-ai`,       icon: Fingerprint },
+      ],
+    },
+    // ── 8. Community ──────────────────────────────────────────────
+    {
+      group: "Community",
+      color: "text-rose-500",
+      items: [
+        { name: "Bulk Messages",  href: `/${tenant}/admin/bulk-messages`, icon: Send },
+        { name: "Parent Log",     href: `/${tenant}/admin/parent-log`,    icon: MessageSquare },
+        { name: "Alumni",         href: `/${tenant}/admin/alumni`,        icon: AlumniIcon },
+        { name: "Scholarships",   href: `/${tenant}/admin/scholarships`,  icon: HeartHandshake },
       ],
     },
   ];
 }
 
 const activeGroupBg: Record<string, string> = {
-  "text-indigo-500": "from-indigo-500/15 border-indigo-400",
+  "text-indigo-500":  "from-indigo-500/15 border-indigo-400",
+  "text-sky-500":     "from-sky-500/15 border-sky-400",
   "text-emerald-500": "from-emerald-500/15 border-emerald-400",
-  "text-amber-500": "from-amber-500/15 border-amber-400",
-  "text-blue-500": "from-blue-500/15 border-blue-400",
-  "text-purple-500": "from-purple-500/15 border-purple-400",
+  "text-blue-500":    "from-blue-500/15 border-blue-400",
+  "text-amber-500":   "from-amber-500/15 border-amber-400",
+  "text-violet-500":  "from-violet-500/15 border-violet-400",
+  "text-purple-500":  "from-purple-500/15 border-purple-400",
+  "text-rose-500":    "from-rose-500/15 border-rose-400",
 };
 const activeGroupIcon: Record<string, string> = {
-  "text-indigo-500": "text-indigo-400 drop-shadow-[0_0_6px_rgba(99,102,241,0.5)]",
+  "text-indigo-500":  "text-indigo-400 drop-shadow-[0_0_6px_rgba(99,102,241,0.5)]",
+  "text-sky-500":     "text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.5)]",
   "text-emerald-500": "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]",
-  "text-amber-500": "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]",
-  "text-blue-500": "text-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.5)]",
-  "text-purple-500": "text-purple-400 drop-shadow-[0_0_6px_rgba(167,139,250,0.5)]",
+  "text-blue-500":    "text-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.5)]",
+  "text-amber-500":   "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]",
+  "text-violet-500":  "text-violet-400 drop-shadow-[0_0_6px_rgba(167,139,250,0.5)]",
+  "text-purple-500":  "text-purple-400 drop-shadow-[0_0_6px_rgba(167,139,250,0.5)]",
+  "text-rose-500":    "text-rose-400 drop-shadow-[0_0_6px_rgba(251,113,133,0.5)]",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -293,6 +351,7 @@ export function TenantSidebar() {
       {/* Footer */}
       <div className="p-3 border-t border-border/60 bg-sidebar">
         <button
+          type="button"
           onClick={handleLogout}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-200"
         >

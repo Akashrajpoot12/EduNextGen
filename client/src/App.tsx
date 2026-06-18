@@ -44,6 +44,27 @@ import { SiblingDiscountPage } from "./pages/admin/SiblingDiscountPage";
 import { BusPassPage } from "./pages/admin/BusPassPage";
 import { LibraryCardPage } from "./pages/admin/LibraryCardPage";
 import { LedgerPage } from "./pages/admin/LedgerPage";
+import { BulkMessagesPage } from "./pages/admin/BulkMessagesPage";
+import { BiometricPage } from "./pages/admin/BiometricPage";
+import { OnlinePaymentPage } from "./pages/admin/OnlinePaymentPage";
+import { AlumniPage } from "./pages/admin/AlumniPage";
+import { HostelPage } from "./pages/admin/HostelPage";
+import { GpsTrackingPage } from "./pages/admin/GpsTrackingPage";
+import { QuestionBankPage } from "./pages/admin/QuestionBankPage";
+import { TCPage } from "./pages/admin/TCPage";
+import { ReportCardPage } from "./pages/admin/ReportCardPage";
+import { VisitorLogPage } from "./pages/admin/VisitorLogPage";
+import { GatePassPage } from "./pages/admin/GatePassPage";
+import { ChequePage } from "./pages/admin/ChequePage";
+import { StaffLeaveBalancePage } from "./pages/admin/StaffLeaveBalancePage";
+import { BonafidePage } from "./pages/admin/BonafidePage";
+import { ComplaintPage } from "./pages/admin/ComplaintPage";
+import { FeeReceiptPage } from "./pages/admin/FeeReceiptPage";
+import { CircularPage } from "./pages/admin/CircularPage";
+import { AdmissionRegisterPage } from "./pages/admin/AdmissionRegisterPage";
+import { ScholarshipPage } from "./pages/admin/ScholarshipPage";
+import { DutyRosterPage } from "./pages/admin/DutyRosterPage";
+import { ExamDateSheetPage } from "./pages/admin/ExamDateSheetPage";
 
 import { TeacherDashboard } from "./pages/teacher/TeacherDashboard";
 import { TeacherAttendancePage } from "./pages/teacher/TeacherAttendancePage";
@@ -151,6 +172,27 @@ function App() {
               <Route path="bus-pass" element={<BusPassPage />} />
               <Route path="library-cards" element={<LibraryCardPage />} />
               <Route path="ledger" element={<LedgerPage />} />
+              <Route path="bulk-messages" element={<BulkMessagesPage />} />
+              <Route path="biometric" element={<BiometricPage />} />
+              <Route path="online-payment" element={<OnlinePaymentPage />} />
+              <Route path="alumni" element={<AlumniPage />} />
+              <Route path="hostel" element={<HostelPage />} />
+              <Route path="gps-tracking" element={<GpsTrackingPage />} />
+              <Route path="question-bank" element={<QuestionBankPage />} />
+              <Route path="tc" element={<TCPage />} />
+              <Route path="report-card" element={<ReportCardPage />} />
+              <Route path="visitor-log" element={<VisitorLogPage />} />
+              <Route path="gate-pass" element={<GatePassPage />} />
+              <Route path="cheque" element={<ChequePage />} />
+              <Route path="leave-balance" element={<StaffLeaveBalancePage />} />
+              <Route path="bonafide" element={<BonafidePage />} />
+              <Route path="complaints" element={<ComplaintPage />} />
+              <Route path="fee-receipt" element={<FeeReceiptPage />} />
+              <Route path="circulars" element={<CircularPage />} />
+              <Route path="admission-register" element={<AdmissionRegisterPage />} />
+              <Route path="scholarships" element={<ScholarshipPage />} />
+              <Route path="duty-roster" element={<DutyRosterPage />} />
+              <Route path="exam-datesheet" element={<ExamDateSheetPage />} />
             </Route>
             
             {/* Teacher Portal Route Group */}
