@@ -1,0 +1,11 @@
+{
+  "name": "edunextgen",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "preview": "npm run preview --prefix client",
+    "web-dev": "npm run dev --prefix web",
+    "web-build": "npm run build --prefix web"
+  }
+}

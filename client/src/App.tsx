@@ -1,0 +1,200 @@
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
+import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { LoginForm } from "./components/auth/login-form";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+
+import { SuperAdminLoginForm } from "./components/auth/super-admin-login-form";
+
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { StudentsDirectory } from "./pages/admin/StudentsDirectory";
+import { TeachersDirectory } from "./pages/admin/TeachersDirectory";
+import { AttendancePage } from "./pages/admin/AttendancePage";
+import { AdmissionsPage } from "./pages/admin/AdmissionsPage";
+import { AnalyticsPage } from "./pages/admin/AnalyticsPage";
+import { AnnouncementsPage } from "./pages/admin/AnnouncementsPage";
+import { CertificatesPage } from "./pages/admin/CertificatesPage";
+import { ClassesPage } from "./pages/admin/ClassesPage";
+import { CommunicationPage } from "./pages/admin/CommunicationPage";
+import { DocumentsPage } from "./pages/admin/DocumentsPage";
+import { ExamsPage } from "./pages/admin/ExamsPage";
+import { FaceAiPage } from "./pages/admin/FaceAiPage";
+import { FeesPage } from "./pages/admin/FeesPage";
+import { HomeworkPage } from "./pages/admin/HomeworkPage";
+import { InventoryPage } from "./pages/admin/InventoryPage";
+import { LeavesPage } from "./pages/admin/LeavesPage";
+import { PayrollPage } from "./pages/admin/PayrollPage";
+import { StaffPage } from "./pages/admin/StaffPage";
+import { SubscriptionPage } from "./pages/admin/SubscriptionPage";
+import { SyllabusPage } from "./pages/admin/SyllabusPage";
+import { TimetablePage } from "./pages/admin/TimetablePage";
+import { TransportPage } from "./pages/admin/TransportPage";
+import { CalendarPage } from "./pages/admin/CalendarPage";
+import { LibraryPage } from "./pages/admin/LibraryPage";
+import { HealthPage } from "./pages/admin/HealthPage";
+import { StaffAttendancePage } from "./pages/admin/StaffAttendancePage";
+import { ClassPromotionPage } from "./pages/admin/ClassPromotionPage";
+import { IDCardsPage } from "./pages/admin/IDCardsPage";
+import { RollListPage } from "./pages/admin/RollListPage";
+import { FeeChallanPage } from "./pages/admin/FeeChallanPage";
+import { ParentCommPage } from "./pages/admin/ParentCommPage";
+import { HallTicketPage } from "./pages/admin/HallTicketPage";
+import { MarksAnalysisPage } from "./pages/admin/MarksAnalysisPage";
+import { SiblingDiscountPage } from "./pages/admin/SiblingDiscountPage";
+import { BusPassPage } from "./pages/admin/BusPassPage";
+import { LibraryCardPage } from "./pages/admin/LibraryCardPage";
+import { LedgerPage } from "./pages/admin/LedgerPage";
+
+import { TeacherDashboard } from "./pages/teacher/TeacherDashboard";
+import { TeacherAttendancePage } from "./pages/teacher/TeacherAttendancePage";
+import { TeacherHomeworkPage } from "./pages/teacher/TeacherHomeworkPage";
+import { TeacherLeavesPage } from "./pages/teacher/TeacherLeavesPage";
+import { TeacherTimetablePage } from "./pages/teacher/TeacherTimetablePage";
+
+import { StudentDashboard } from "./pages/student/StudentDashboard";
+import { StudentHomeworkPage } from "./pages/student/StudentHomeworkPage";
+import { StudentNoticesPage } from "./pages/student/StudentNoticesPage";
+import { StudentTimetablePage } from "./pages/student/StudentTimetablePage";
+
+import { ParentDashboard } from "./pages/parent/ParentDashboard";
+import { ParentFeesPage } from "./pages/parent/ParentFeesPage";
+import { ParentInboxPage } from "./pages/parent/ParentInboxPage";
+import { ParentTransportPage } from "./pages/parent/ParentTransportPage";
+
+import { SuperAdminDashboard } from "./pages/super-admin/SuperAdminDashboard";
+import SetupPage from "./pages/SetupPage";
+
+function App() {
+  return (
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/super-admin/login" replace />} />
+
+          {/* First-time school admin setup (uses invite token, no auth required) */}
+          <Route path="/setup" element={<SetupPage />} />
+          
+          {/* Global Super Admin Authentication */}
+          <Route path="/super-admin/login" element={
+            <div className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden p-4">
+              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-emerald-500/20 blur-[120px] pointer-events-none" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+              <div className="z-10">
+                <SuperAdminLoginForm />
+              </div>
+            </div>
+          } />
+
+          {/* Global Super Admin Dashboard with Guard */}
+          <Route path="/super-admin" element={
+            <ProtectedRoute isSuperAdminRoute={true}>
+              <SuperAdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Auth Routes */}
+          <Route path="/:tenantId/login" element={
+            <div className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden p-4">
+              {/* Dynamic decorative background elements for premium feel */}
+              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+              <div className="z-10">
+                <LoginForm />
+              </div>
+            </div>
+          } />
+
+          {/* Dashboard Portal Layout */}
+          <Route path="/:tenantId" element={<DashboardLayout />}>
+            
+            {/* School Admin Portal Route Group */}
+            <Route path="admin" element={
+              <ProtectedRoute allowedRoles={["school_admin", "admin", "staff"]}>
+                <Outlet />
+              </ProtectedRoute>
+            }>
+              <Route index element={<AdminDashboard />} />
+              <Route path="students" element={<StudentsDirectory />} />
+              <Route path="teachers" element={<TeachersDirectory />} />
+              <Route path="attendance" element={<AttendancePage />} />
+              <Route path="admissions" element={<AdmissionsPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
+              <Route path="certificates" element={<CertificatesPage />} />
+              <Route path="classes" element={<ClassesPage />} />
+              <Route path="communication" element={<CommunicationPage />} />
+              <Route path="documents" element={<DocumentsPage />} />
+              <Route path="exams" element={<ExamsPage />} />
+              <Route path="face-ai" element={<FaceAiPage />} />
+              <Route path="fees" element={<FeesPage />} />
+              <Route path="homework" element={<HomeworkPage />} />
+              <Route path="inventory" element={<InventoryPage />} />
+              <Route path="leaves" element={<LeavesPage />} />
+              <Route path="payroll" element={<PayrollPage />} />
+              <Route path="staff" element={<StaffPage />} />
+              <Route path="subscription" element={<SubscriptionPage />} />
+              <Route path="syllabus" element={<SyllabusPage />} />
+              <Route path="timetable" element={<TimetablePage />} />
+              <Route path="transport" element={<TransportPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="library" element={<LibraryPage />} />
+              <Route path="health" element={<HealthPage />} />
+              <Route path="staff-attendance" element={<StaffAttendancePage />} />
+              <Route path="class-promotion" element={<ClassPromotionPage />} />
+              <Route path="id-cards" element={<IDCardsPage />} />
+              <Route path="roll-list" element={<RollListPage />} />
+              <Route path="fee-challan" element={<FeeChallanPage />} />
+              <Route path="parent-log" element={<ParentCommPage />} />
+              <Route path="hall-tickets" element={<HallTicketPage />} />
+              <Route path="marks-analysis" element={<MarksAnalysisPage />} />
+              <Route path="sibling-discount" element={<SiblingDiscountPage />} />
+              <Route path="bus-pass" element={<BusPassPage />} />
+              <Route path="library-cards" element={<LibraryCardPage />} />
+              <Route path="ledger" element={<LedgerPage />} />
+            </Route>
+            
+            {/* Teacher Portal Route Group */}
+            <Route path="teacher" element={
+              <ProtectedRoute allowedRoles={["teacher"]}>
+                <Outlet />
+              </ProtectedRoute>
+            }>
+              <Route index element={<TeacherDashboard />} />
+              <Route path="attendance" element={<TeacherAttendancePage />} />
+              <Route path="homework" element={<TeacherHomeworkPage />} />
+              <Route path="leaves" element={<TeacherLeavesPage />} />
+              <Route path="timetable" element={<TeacherTimetablePage />} />
+            </Route>
+
+            {/* Student Portal Route Group */}
+            <Route path="student" element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <Outlet />
+              </ProtectedRoute>
+            }>
+              <Route index element={<StudentDashboard />} />
+              <Route path="homework" element={<StudentHomeworkPage />} />
+              <Route path="notices" element={<StudentNoticesPage />} />
+              <Route path="timetable" element={<StudentTimetablePage />} />
+            </Route>
+
+            {/* Parent Portal Route Group */}
+            <Route path="parent" element={
+              <ProtectedRoute allowedRoles={["parent"]}>
+                <Outlet />
+              </ProtectedRoute>
+            }>
+              <Route index element={<ParentDashboard />} />
+              <Route path="fees" element={<ParentFeesPage />} />
+              <Route path="inbox" element={<ParentInboxPage />} />
+              <Route path="transport" element={<ParentTransportPage />} />
+            </Route>
+            
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
+  );
+}
+
+export default App;
