@@ -57,32 +57,30 @@ export function TeachersDirectory() {
     setSaving(true);
     setError("");
     try {
-      // 1. Create Supabase Auth user
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.tempPassword,
-        options: { data: { full_name: form.name } },
+      // Call Edge Function — uses service role, no email sent
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.tempPassword,
+          name: form.name,
+          school_id: schoolId,
+          role: "teacher",
+          phone: form.phone || null,
+          subject: form.subject || null,
+          department: form.department || null,
+          qualification: form.qualification || null,
+          joining_date: form.joining_date || null,
+        }),
       });
-      if (authErr) throw new Error(authErr.message);
-      if (!authData.user) throw new Error("User creation failed.");
-
-      const uid = authData.user.id;
-
-      // 2. Upsert into users table
-      const { error: uErr } = await supabase.from("users").upsert({
-        id: uid, email: form.email, full_name: form.name, name: form.name,
-        school_id: schoolId, role: "teacher",
-        phone: form.phone || null, subject: form.subject || null,
-        qualification: form.qualification || null, department: form.department || null,
-        joining_date: form.joining_date || null,
-      }, { onConflict: "id" });
-      if (uErr) throw new Error(uErr.message);
-
-      // 3. Insert user_role for backward compat
-      await supabase.from("user_roles").upsert(
-        { user_id: uid, school_id: schoolId, role: "teacher" },
-        { onConflict: "user_id,school_id,role" }
-      );
+      const result = await res.json();
+      if (!res.ok || result.error) throw new Error(result.error || "User creation failed.");
 
       setCreatedCreds({ email: form.email, password: form.tempPassword });
       setShowForm(false);

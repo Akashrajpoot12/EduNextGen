@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
-import { Plus, Search, Pencil, X, Users } from "lucide-react";
+import { Plus, Search, Pencil, X, Users, CheckCircle2, Copy, Eye, CreditCard, Download } from "lucide-react";
+import { toast } from "sonner";
 
 type Student = {
   id: string;
@@ -43,11 +45,16 @@ const EMPTY_FORM = {
   previous_school: "",
   academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
   class_id: "",
+  // Parent portal fields
+  parent_name: "",
+  parent_email: "",
+  parent_mobile: "",
 };
 
 export function StudentsDirectory() {
   const supabase = createClient();
   const { tenantId: schoolId } = useTenant();
+  const navigate = useNavigate();
 
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -60,10 +67,18 @@ export function StudentsDirectory() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [feeStructures, setFeeStructures] = useState<{ id: string; name: string; amount: number; frequency: string }[]>([]);
   const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [school, setSchool] = useState<{ name: string; subdomain: string } | null>(null);
+
+  // ID Card modal state
+  const [idCardStudent, setIdCardStudent] = useState<Student | null>(null);
+
+  // Attendance CSV export state
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   async function fetchData() {
     setLoading(true);
-    const [studsRes, classRes, feesRes] = await Promise.all([
+    const [studsRes, classRes, feesRes, schoolRes] = await Promise.all([
       supabase
         .from("students")
         .select("id, name, roll_number, admission_number, father_name, mother_name, phone, address, blood_group, category, date_of_birth, gender, previous_school, academic_year, class_id, classes(name)")
@@ -71,10 +86,12 @@ export function StudentsDirectory() {
         .order("name"),
       supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
       supabase.from("fee_structures").select("id, name, amount, frequency").eq("school_id", schoolId).eq("is_active", true).order("name"),
+      supabase.from("schools").select("name, subdomain").eq("id", schoolId).maybeSingle(),
     ]);
     setStudents(studsRes.data || []);
     setClasses(classRes.data || []);
     setFeeStructures(feesRes.data || []);
+    if (schoolRes.data) setSchool(schoolRes.data);
     setLoading(false);
   }
 
@@ -122,15 +139,88 @@ export function StudentsDirectory() {
   async function handleSubmit() {
     if (!form.name.trim()) return;
     setSubmitting(true);
+
     if (editStudent) {
-      await supabase.from("students").update({ ...form }).eq("id", editStudent.id);
+      // Edit: simple update, no parent account changes
+      const { parent_name, parent_email, parent_mobile, ...updateData } = form;
+      await supabase.from("students").update(updateData).eq("id", editStudent.id);
+      setSubmitting(false);
+      setShowForm(false);
+      fetchData();
+      return;
+    }
+
+    // New student enrollment
+    const hasParentEmail = form.parent_email.trim() !== "";
+
+    if (hasParentEmail) {
+      // Call Edge Function to create student + parent account + send SMS
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const { parent_name, parent_email, parent_mobile, ...studentFields } = form;
+
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-student`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              studentData: { ...studentFields },
+              parentName: parent_name || form.father_name || "Parent",
+              parentEmail: parent_email,
+              parentMobile: parent_mobile,
+              schoolId,
+              schoolName: school?.name,
+              schoolSubdomain: school?.subdomain,
+            }),
+          }
+        );
+
+        const result = await res.json();
+
+        if (result.error) {
+          toast.error(`Enrollment failed: ${result.error}`);
+        } else {
+          setCreatedCredentials(result.credentials);
+          toast.success("Student enrolled & parent account created!");
+          // Auto-assign fee structures
+          if (result.studentId && selectedFeeIds.length > 0) {
+            const today = new Date();
+            const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split("T")[0];
+            const assignments = selectedFeeIds.map((feeId) => {
+              const fs = feeStructures.find((f) => f.id === feeId);
+              return {
+                school_id: schoolId,
+                student_id: result.studentId,
+                fee_structure_id: feeId,
+                amount: fs?.amount || 0,
+                due_date: dueDate,
+                status: "pending",
+                academic_year: form.academic_year,
+              };
+            });
+            await supabase.from("student_fee_assignments").insert(assignments);
+          }
+          setShowForm(false);
+          setSelectedFeeIds([]);
+          fetchData();
+        }
+      } catch (err: any) {
+        toast.error("Network error: " + err.message);
+      }
     } else {
+      // No parent email — direct insert without parent account
+      const { parent_name, parent_email, parent_mobile, ...studentFields } = form;
       const { data: newStudent } = await supabase
         .from("students")
-        .insert({ ...form, school_id: schoolId })
+        .insert({ ...studentFields, school_id: schoolId })
         .select("id")
         .single();
-      // Auto-assign selected fee structures
+
       if (newStudent && selectedFeeIds.length > 0) {
         const today = new Date();
         const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split("T")[0];
@@ -148,11 +238,13 @@ export function StudentsDirectory() {
         });
         await supabase.from("student_fee_assignments").insert(assignments);
       }
+      toast.success("Student enrolled successfully!");
+      setShowForm(false);
+      setSelectedFeeIds([]);
+      fetchData();
     }
+
     setSubmitting(false);
-    setShowForm(false);
-    setSelectedFeeIds([]);
-    fetchData();
   }
 
   async function handleDelete(id: string) {
@@ -173,6 +265,55 @@ export function StudentsDirectory() {
     return matchSearch && matchClass;
   });
 
+  // --- Feature 2: Export Attendance CSV ---
+  async function handleExportAttendanceCsv() {
+    setExportingCsv(true);
+    try {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+
+      const { data: attendanceRows } = await supabase
+        .from("daily_attendance")
+        .select("student_id, status")
+        .eq("school_id", schoolId)
+        .gte("date", monthStart)
+        .lte("date", monthEnd);
+
+      // Build a map: student_id -> { present, absent }
+      const attMap: Record<string, { present: number; absent: number }> = {};
+      for (const row of attendanceRows || []) {
+        if (!attMap[row.student_id]) attMap[row.student_id] = { present: 0, absent: 0 };
+        if (row.status === "present") attMap[row.student_id].present += 1;
+        else attMap[row.student_id].absent += 1;
+      }
+
+      const headers = ["Student Name", "Roll No", "Class", "Present Days", "Absent Days", "Attendance %"];
+      const rows = students.map((s) => {
+        const rec = attMap[s.id] || { present: 0, absent: 0 };
+        const total = rec.present + rec.absent;
+        const pct = total > 0 ? Math.round((rec.present / total) * 100) : 0;
+        const cls = (s.classes as { name: string } | null)?.name || "";
+        return [s.name, s.roll_number || "", cls, rec.present, rec.absent, `${pct}%`];
+      });
+
+      const csvLines = [headers, ...rows].map((r) => r.map(String).map((v) => `"${v.replace(/"/g, '""')}"`).join(","));
+      const csv = csvLines.join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance-${now.toLocaleString("en-IN", { month: "long", year: "numeric" }).replace(" ", "-")}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Attendance CSV exported successfully!");
+    } catch {
+      toast.error("Failed to export attendance CSV.");
+    } finally {
+      setExportingCsv(false);
+    }
+  }
+
   return (
     <div>
       <div className="page-header flex items-center justify-between">
@@ -180,13 +321,24 @@ export function StudentsDirectory() {
           <h1>Students Directory</h1>
           <p>Enroll, manage and view all student records</p>
         </div>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90"
-        >
-          <Plus className="w-4 h-4" /> Enroll Student
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportAttendanceCsv}
+            disabled={exportingCsv}
+            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50 disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            {exportingCsv ? "Exporting…" : "Export Attendance CSV"}
+          </button>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90"
+          >
+            <Plus className="w-4 h-4" /> Enroll Student
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -272,6 +424,17 @@ export function StudentsDirectory() {
                   <td className="text-sm">{s.date_of_birth ? new Date(s.date_of_birth).toLocaleDateString("en-IN") : "—"}</td>
                   <td>
                     <div className="flex items-center gap-2">
+                      <button type="button" title="View 360° Profile"
+                        onClick={() => navigate(`/${schoolId}/admin/students/${s.id}`)}
+                        className="text-blue-500 hover:text-blue-700 p-1">
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Feature 1: ID Card button */}
+                      <button type="button" title="ID Card Preview"
+                        onClick={() => setIdCardStudent(s)}
+                        className="text-fuchsia-500 hover:text-fuchsia-700 p-1">
+                        <CreditCard className="w-3.5 h-3.5" />
+                      </button>
                       <button type="button" title="Edit" onClick={() => openEdit(s)} className="text-primary hover:opacity-70 p-1">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
@@ -286,6 +449,79 @@ export function StudentsDirectory() {
           </tbody>
         </table>
       </div>
+
+      {/* Feature 1: ID Card Modal */}
+      {idCardStudent && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 print:bg-transparent">
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm overflow-hidden print:shadow-none print:border-none">
+            {/* Fuchsia gradient header */}
+            <div className="bg-gradient-to-r from-fuchsia-600 to-purple-600 px-6 py-5 text-white">
+              <p className="text-xs font-medium opacity-80 uppercase tracking-widest mb-0.5">Student ID Card</p>
+              <h2 className="font-bold text-lg leading-tight">{school?.name || "School Name"}</h2>
+            </div>
+
+            {/* Card body */}
+            <div className="px-6 py-5 flex items-start gap-4">
+              {/* Avatar */}
+              <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+                {idCardStudent.name?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-base text-foreground truncate">{idCardStudent.name}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {(idCardStudent.classes as { name: string } | null)?.name || "—"}
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Roll No</span>
+                    <p className="font-semibold text-foreground">{idCardStudent.roll_number || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Adm No</span>
+                    <p className="font-semibold text-foreground">{idCardStudent.admission_number || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Blood Group</span>
+                    <p className="font-semibold text-foreground">{idCardStudent.blood_group || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Gender</span>
+                    <p className="font-semibold text-foreground">{idCardStudent.gender || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer bar */}
+            <div className="bg-fuchsia-50 dark:bg-fuchsia-950/30 border-t border-border px-6 py-3 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                DOB: {idCardStudent.date_of_birth ? new Date(idCardStudent.date_of_birth).toLocaleDateString("en-IN") : "—"}
+              </span>
+              <span className="text-xs font-mono text-fuchsia-700 dark:text-fuchsia-400">
+                {idCardStudent.admission_number || idCardStudent.id.slice(0, 8).toUpperCase()}
+              </span>
+            </div>
+
+            {/* Action buttons */}
+            <div className="px-6 py-4 flex gap-3 print:hidden">
+              <button
+                type="button"
+                onClick={() => setIdCardStudent(null)}
+                className="flex-1 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex-1 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90"
+              >
+                Print ID Card
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enrollment / Edit Modal */}
       {showForm && (
@@ -373,6 +609,45 @@ export function StudentsDirectory() {
                   <input value={form.address} onChange={(e) => f("address", e.target.value)} placeholder="Home address" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" />
                 </div>
               </div>
+
+              {/* Parent Portal Account */}
+              {!editStudent && (
+                <>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-1 mt-2">
+                    Parent Portal Account
+                    <span className="ml-2 text-[10px] normal-case font-normal text-primary">(auto-creates login & sends SMS)</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Parent Full Name</label>
+                      <input value={form.parent_name} onChange={(e) => f("parent_name", e.target.value)}
+                        placeholder="e.g. Rajesh Sharma"
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Parent Email *</label>
+                      <input type="email" value={form.parent_email} onChange={(e) => f("parent_email", e.target.value)}
+                        placeholder="parent@gmail.com"
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Parent Mobile (10 digits)</label>
+                      <input type="tel" value={form.parent_mobile} onChange={(e) => f("parent_mobile", e.target.value)}
+                        placeholder="98XXXXXXXX"
+                        maxLength={10}
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="w-full bg-muted/50 rounded-lg px-3 py-2 text-xs text-muted-foreground border border-border">
+                        Password auto-generated:<br />
+                        <span className="font-mono font-semibold text-foreground">
+                          Parent@{form.parent_mobile?.slice(-4) || "XXXX"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {!editStudent && feeStructures.length > 0 && (
@@ -408,6 +683,53 @@ export function StudentsDirectory() {
                 {submitting ? "Saving…" : editStudent ? "Save Changes" : "Enroll Student"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credentials success modal */}
+      {createdCredentials && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Parent Account Created!</h3>
+                <p className="text-sm text-muted-foreground">SMS sent to parent's mobile</p>
+              </div>
+            </div>
+
+            <div className="bg-muted/50 rounded-xl p-4 space-y-3 border border-border mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Email</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono font-medium">{createdCredentials.email}</span>
+                  <button type="button" title="Copy email" onClick={() => { navigator.clipboard.writeText(createdCredentials.email); toast.success("Copied!"); }}>
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Password</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono font-semibold text-primary">{createdCredentials.password}</span>
+                  <button type="button" title="Copy password" onClick={() => { navigator.clipboard.writeText(createdCredentials.password); toast.success("Copied!"); }}>
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground mb-4">
+              Share these credentials with the parent. They can log in at the school portal URL.
+            </p>
+
+            <button type="button" onClick={() => setCreatedCredentials(null)}
+              className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90">
+              Done
+            </button>
           </div>
         </div>
       )}

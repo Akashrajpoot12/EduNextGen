@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, Plus, Wallet, IndianRupee, Search, Banknote } from "lucide-react";
+import { Loader2, Plus, Wallet, IndianRupee, Search, Banknote, Printer, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function PayrollPage() {
@@ -25,43 +25,41 @@ export function PayrollPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const supabase = createClient();
+  const [printSalary, setPrintSalary] = useState<any>(null);
+  const [schoolName, setSchoolName] = useState("");
+  const [payMonth, setPayMonth] = useState(() => {
+    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   useEffect(() => {
-    fetchInitialData();
-  }, [tenant]);
+    if (schoolId) {
+      fetchInitialData();
+      supabase.from("schools").select("name").eq("id", schoolId).maybeSingle().then(({ data }) => {
+        if (data) setSchoolName(data.name);
+      });
+    }
+  }, [schoolId]);
 
   async function fetchInitialData() {
     setLoading(true);
     try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-      setSchoolId(school.id);
-
       // Fetch teachers who do NOT have a salary defined yet
       const { data: teachersData } = await supabase
-        .from('user_roles')
-        .select('user_id, users(id, full_name, email)')
-        .eq('school_id', school.id)
+        .from('users')
+        .select('id, name, full_name, email')
+        .eq('school_id', schoolId)
         .eq('role', 'teacher');
 
       // Fetch existing salaries
       const { data: salariesData } = await supabase
         .from('salaries')
         .select('id, user_id, base_salary, users(full_name, email)')
-        .eq('school_id', school.id);
+        .eq('school_id', schoolId);
 
       const existingUserIds = salariesData ? salariesData.map(s => s.user_id) : [];
-      
+
       if (teachersData) {
-        // Filter out teachers who already have salaries defined
-        const availableTeachers = teachersData
-          .map(t => t.users)
-          .filter(t => t && !existingUserIds.includes(t.id));
+        const availableTeachers = teachersData.filter(t => t && !existingUserIds.includes(t.id));
         setTeachers(availableTeachers);
       }
 
@@ -220,7 +218,9 @@ export function PayrollPage() {
                         <IndianRupee className="w-3 h-3 mr-1" /> {Number(salary.base_salary).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">Pay Salary</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setPrintSalary(salary)} className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
+                          <Printer className="w-3.5 h-3.5 mr-1" /> Payslip
+                        </Button>
                       </td>
                     </motion.tr>
                   ))}
@@ -230,6 +230,98 @@ export function PayrollPage() {
           </div>
         </Card>
       )}
+      {/* Payslip Print Modal */}
+      {printSalary && (() => {
+        const gross = Number(printSalary.base_salary);
+        const hra   = Math.round(gross * 0.2);
+        const ta    = Math.round(gross * 0.1);
+        const basic = gross - hra - ta;
+        const pf    = Math.round(gross * 0.12);
+        const tds   = Math.round(gross * 0.05);
+        const net   = gross - pf - tds;
+        const [yr, mo] = payMonth.split("-");
+        const monthName = new Date(Number(yr), Number(mo) - 1).toLocaleString("en-IN", { month: "long", year: "numeric" });
+
+        return (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg text-slate-900">
+              <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b">
+                <div>
+                  <h2 className="font-bold text-lg">{schoolName || "School"}</h2>
+                  <p className="text-xs text-slate-500">Salary Slip — {monthName}</p>
+                </div>
+                <button type="button" title="Close" onClick={() => setPrintSalary(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-6 py-4 space-y-4">
+                {/* Employee details */}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-slate-500">Name:</span> <span className="font-medium">{printSalary.users?.full_name}</span></div>
+                  <div><span className="text-slate-500">Email:</span> <span className="font-medium">{printSalary.users?.email}</span></div>
+                  <div><span className="text-slate-500">Pay Period:</span> <span className="font-medium">{monthName}</span></div>
+                </div>
+
+                {/* Month picker */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Change month:</span>
+                  <input type="month" value={payMonth} onChange={e => setPayMonth(e.target.value)}
+                    title="Pay month" placeholder="YYYY-MM"
+                    className="text-xs border border-slate-200 rounded px-2 py-1" />
+                </div>
+
+                {/* Earnings */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 text-slate-700">Earnings</h3>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {[["Basic Salary", basic], ["HRA (20%)", hra], ["Travel Allowance (10%)", ta]].map(([l, v]) => (
+                        <tr key={l as string} className="border-t border-slate-100">
+                          <td className="py-1.5 text-slate-600">{l}</td>
+                          <td className="py-1.5 text-right font-medium">₹{(v as number).toLocaleString("en-IN")}</td>
+                        </tr>
+                      ))}
+                      <tr className="border-t-2 border-slate-300 font-semibold">
+                        <td className="py-2">Gross Salary</td>
+                        <td className="py-2 text-right text-emerald-700">₹{gross.toLocaleString("en-IN")}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Deductions */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 text-slate-700">Deductions</h3>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {[["PF (12%)", pf], ["TDS (5%)", tds]].map(([l, v]) => (
+                        <tr key={l as string} className="border-t border-slate-100">
+                          <td className="py-1.5 text-slate-600">{l}</td>
+                          <td className="py-1.5 text-right font-medium text-red-600">-₹{(v as number).toLocaleString("en-IN")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Net */}
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex justify-between items-center">
+                  <span className="font-bold text-slate-700">Net Pay</span>
+                  <span className="text-2xl font-bold text-emerald-700">₹{net.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+
+              <div className="px-6 pb-5 flex justify-end">
+                <button type="button" onClick={() => window.print()}
+                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+                  <Printer className="w-4 h-4" /> Print / Save PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

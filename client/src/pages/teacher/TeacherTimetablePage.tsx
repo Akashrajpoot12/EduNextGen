@@ -3,53 +3,39 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useParams } from "react-router-dom";
+import { useTenant } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function TeacherTimetablePage() {
-  const params = useParams();
-  const tenant = params.tenantId as string;
+  const { tenantId: schoolId } = useTenant();
   const [loading, setLoading] = useState(true);
   const [schedule, setSchedule] = useState<any[]>([]);
 
   const supabase = createClient();
 
   useEffect(() => {
-    fetchTimetable();
-  }, [tenant]);
-
-  async function fetchTimetable() {
-    setLoading(true);
-    try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const { data } = await supabase
-        .from('timetable')
-        .select(`
-          id, day_of_week, start_time, end_time, subject,
-          classes:class_id(grade_level, section)
-        `)
-        .eq('school_id', school.id)
-        .eq('teacher_id', user?.id)
-        .order('start_time', { ascending: true });
-
-      if (data) setSchedule(data);
-    } catch (error) {
-      console.error("Error fetching timetable:", error);
-    } finally {
-      setLoading(false);
+    if (!schoolId) return;
+    async function fetchTimetable() {
+      setLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data } = await supabase
+          .from('timetables')
+          .select(`id, day_of_week, start_time, end_time, subject, classes:class_id(grade_level, section)`)
+          .eq('school_id', schoolId)
+          .eq('teacher_id', user?.id)
+          .order('start_time', { ascending: true });
+        if (data) setSchedule(data);
+      } catch (error) {
+        console.error("Error fetching timetable:", error);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+    fetchTimetable();
+  }, [schoolId]);
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 

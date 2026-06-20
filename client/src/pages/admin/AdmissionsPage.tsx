@@ -66,14 +66,17 @@ export function AdmissionsPage() {
     fetchApplications();
   }
 
+  // tenantId from URL path segment (subdomain slug)
+  const tenantSlug = window.location.pathname.split("/")[1] || schoolId;
+
   function copyLink() {
-    const url = `${window.location.origin}/admission/${schoolId}`;
+    const url = `${window.location.origin}/${tenantSlug}/apply`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/admission/${schoolId}`;
+  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${tenantSlug}/apply`;
 
   const counts = { pending: 0, called: 0, admitted: 0, rejected: 0 };
   applications.forEach((a) => { if (a.status in counts) counts[a.status as keyof typeof counts]++; });

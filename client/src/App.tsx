@@ -1,4 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { AccountSettingsPage } from "./pages/shared/AccountSettingsPage";
+import { AdmissionFormPage } from "./pages/public/AdmissionFormPage";
+import { PTMPage } from "./pages/admin/PTMPage";
+import { TeacherDiaryPage } from "./pages/teacher/TeacherDiaryPage";
+import { ParentDiaryPage } from "./pages/parent/ParentDiaryPage";
+import { StudentProfileView } from "./pages/admin/StudentProfileView";
+import { MessageTemplatesPage } from "./pages/admin/MessageTemplatesPage";
 import { ThemeProvider } from "next-themes";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { LoginForm } from "./components/auth/login-form";
@@ -71,26 +78,53 @@ import { TeacherAttendancePage } from "./pages/teacher/TeacherAttendancePage";
 import { TeacherHomeworkPage } from "./pages/teacher/TeacherHomeworkPage";
 import { TeacherLeavesPage } from "./pages/teacher/TeacherLeavesPage";
 import { TeacherTimetablePage } from "./pages/teacher/TeacherTimetablePage";
+import { TeacherGradebookPage } from "./pages/teacher/TeacherGradebookPage";
+import { TeacherNoticesPage } from "./pages/teacher/TeacherNoticesPage";
+import { TeacherSyllabusPage } from "./pages/teacher/TeacherSyllabusPage";
+import { TeacherStudentsPage } from "./pages/teacher/TeacherStudentsPage";
+import { TeacherProfilePage } from "./pages/teacher/TeacherProfilePage";
+import { TeacherSubmissionsPage } from "./pages/teacher/TeacherSubmissionsPage";
+import { TeacherMarksHistoryPage } from "./pages/teacher/TeacherMarksHistoryPage";
+import { TeacherAttendanceReportPage } from "./pages/teacher/TeacherAttendanceReportPage";
+import { TeacherMessagesPage } from "./pages/teacher/TeacherMessagesPage";
+import { TeacherPerformancePage } from "./pages/teacher/TeacherPerformancePage";
+import { TeacherNotificationsPage } from "./pages/teacher/TeacherNotificationsPage";
 
 import { StudentDashboard } from "./pages/student/StudentDashboard";
 import { StudentHomeworkPage } from "./pages/student/StudentHomeworkPage";
 import { StudentNoticesPage } from "./pages/student/StudentNoticesPage";
 import { StudentTimetablePage } from "./pages/student/StudentTimetablePage";
+import { StudentMarksPage } from "./pages/student/StudentMarksPage";
+import { StudentAttendancePage } from "./pages/student/StudentAttendancePage";
+import { StudentProfilePage } from "./pages/student/StudentProfilePage";
+import { StudentFeesPage } from "./pages/student/StudentFeesPage";
+import { StudentLeavePage } from "./pages/student/StudentLeavePage";
+import { StudentMessagesPage } from "./pages/student/StudentMessagesPage";
+import { StudentDocumentsPage } from "./pages/student/StudentDocumentsPage";
 
 import { ParentDashboard } from "./pages/parent/ParentDashboard";
 import { ParentFeesPage } from "./pages/parent/ParentFeesPage";
 import { ParentInboxPage } from "./pages/parent/ParentInboxPage";
 import { ParentTransportPage } from "./pages/parent/ParentTransportPage";
+import { ParentAttendancePage } from "./pages/parent/ParentAttendancePage";
+import { ParentMarksPage } from "./pages/parent/ParentMarksPage";
+import { ParentHomeworkPage } from "./pages/parent/ParentHomeworkPage";
+import { ParentTimetablePage } from "./pages/parent/ParentTimetablePage";
+import { ParentLeavePage } from "./pages/parent/ParentLeavePage";
+import { ParentProfilePage } from "./pages/parent/ParentProfilePage";
 
 import { SuperAdminDashboard } from "./pages/super-admin/SuperAdminDashboard";
 import SetupPage from "./pages/SetupPage";
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/super-admin/login" replace />} />
+
+          {/* Public Online Admission Form — no login required */}
+          <Route path="/:tenantId/apply" element={<AdmissionFormPage />} />
 
           {/* First-time school admin setup (uses invite token, no auth required) */}
           <Route path="/setup" element={<SetupPage />} />
@@ -136,6 +170,7 @@ function App() {
             }>
               <Route index element={<AdminDashboard />} />
               <Route path="students" element={<StudentsDirectory />} />
+              <Route path="students/:studentId" element={<StudentProfileView />} />
               <Route path="teachers" element={<TeachersDirectory />} />
               <Route path="attendance" element={<AttendancePage />} />
               <Route path="admissions" element={<AdmissionsPage />} />
@@ -158,6 +193,8 @@ function App() {
               <Route path="timetable" element={<TimetablePage />} />
               <Route path="transport" element={<TransportPage />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="ptm" element={<PTMPage />} />
+              <Route path="message-templates" element={<MessageTemplatesPage />} />
               <Route path="library" element={<LibraryPage />} />
               <Route path="health" element={<HealthPage />} />
               <Route path="staff-attendance" element={<StaffAttendancePage />} />
@@ -193,6 +230,7 @@ function App() {
               <Route path="scholarships" element={<ScholarshipPage />} />
               <Route path="duty-roster" element={<DutyRosterPage />} />
               <Route path="exam-datesheet" element={<ExamDateSheetPage />} />
+              <Route path="profile" element={<AccountSettingsPage />} />
             </Route>
             
             {/* Teacher Portal Route Group */}
@@ -206,6 +244,18 @@ function App() {
               <Route path="homework" element={<TeacherHomeworkPage />} />
               <Route path="leaves" element={<TeacherLeavesPage />} />
               <Route path="timetable" element={<TeacherTimetablePage />} />
+              <Route path="gradebook" element={<TeacherGradebookPage />} />
+              <Route path="notices" element={<TeacherNoticesPage />} />
+              <Route path="syllabus" element={<TeacherSyllabusPage />} />
+              <Route path="students" element={<TeacherStudentsPage />} />
+              <Route path="profile" element={<AccountSettingsPage />} />
+              <Route path="submissions" element={<TeacherSubmissionsPage />} />
+              <Route path="marks-history" element={<TeacherMarksHistoryPage />} />
+              <Route path="attendance-report" element={<TeacherAttendanceReportPage />} />
+              <Route path="messages" element={<TeacherMessagesPage />} />
+              <Route path="performance" element={<TeacherPerformancePage />} />
+              <Route path="notifications" element={<TeacherNotificationsPage />} />
+              <Route path="diary" element={<TeacherDiaryPage />} />
             </Route>
 
             {/* Student Portal Route Group */}
@@ -218,6 +268,13 @@ function App() {
               <Route path="homework" element={<StudentHomeworkPage />} />
               <Route path="notices" element={<StudentNoticesPage />} />
               <Route path="timetable" element={<StudentTimetablePage />} />
+              <Route path="marks" element={<StudentMarksPage />} />
+              <Route path="attendance" element={<StudentAttendancePage />} />
+              <Route path="profile" element={<AccountSettingsPage />} />
+              <Route path="fees" element={<StudentFeesPage />} />
+              <Route path="leaves" element={<StudentLeavePage />} />
+              <Route path="messages" element={<StudentMessagesPage />} />
+              <Route path="documents" element={<StudentDocumentsPage />} />
             </Route>
 
             {/* Parent Portal Route Group */}
@@ -230,6 +287,13 @@ function App() {
               <Route path="fees" element={<ParentFeesPage />} />
               <Route path="inbox" element={<ParentInboxPage />} />
               <Route path="transport" element={<ParentTransportPage />} />
+              <Route path="attendance" element={<ParentAttendancePage />} />
+              <Route path="marks" element={<ParentMarksPage />} />
+              <Route path="homework" element={<ParentHomeworkPage />} />
+              <Route path="timetable" element={<ParentTimetablePage />} />
+              <Route path="leaves" element={<ParentLeavePage />} />
+              <Route path="profile" element={<AccountSettingsPage />} />
+              <Route path="diary" element={<ParentDiaryPage />} />
             </Route>
             
           </Route>

@@ -29,48 +29,18 @@ export function SyllabusPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetchInitialData();
-  }, [tenant]);
+    if (schoolId) fetchInitialData();
+  }, [schoolId]);
 
   async function fetchInitialData() {
     setLoading(true);
     try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-      setSchoolId(school.id);
-
-      const { data: classesData } = await supabase
-        .from('classes')
-        .select('id, grade_level, section')
-        .eq('school_id', school.id)
-        .order('grade_level', { ascending: true });
-
+      const [{ data: classesData }, { data: syllabusData }] = await Promise.all([
+        supabase.from('classes').select('id, grade_level, section').eq('school_id', schoolId).order('grade_level'),
+        supabase.from('syllabus').select(`id, subject, title, status, created_at, classes:class_id(grade_level, section)`).eq('school_id', schoolId).order('created_at', { ascending: false }),
+      ]);
       if (classesData) setClasses(classesData);
-
-      fetchSyllabus(school.id);
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-      setLoading(false);
-    }
-  }
-
-  async function fetchSyllabus(sId: string) {
-    try {
-      const { data } = await supabase
-        .from('syllabus')
-        .select(`
-          id, subject, title, status, created_at,
-          classes:class_id(grade_level, section)
-        `)
-        .eq('school_id', sId)
-        .order('created_at', { ascending: false });
-
-      if (data) setSyllabi(data);
+      if (syllabusData) setSyllabi(syllabusData);
     } catch (error) {
       console.error("Error fetching syllabus:", error);
     } finally {
@@ -96,7 +66,7 @@ export function SyllabusPage() {
       setSubject("");
       setTitle("");
       setIsDialogOpen(false);
-      fetchSyllabus(schoolId);
+      fetchInitialData();
       
     } catch (error: any) {
       console.error("Error adding syllabus:", error);

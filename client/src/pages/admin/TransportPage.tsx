@@ -31,28 +31,16 @@ export function TransportPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetchTransportData();
-  }, [tenant]);
+    if (schoolId) fetchTransportData();
+  }, [schoolId]);
 
   async function fetchTransportData() {
     setLoading(true);
     try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-      setSchoolId(school.id);
-
       const { data: routesData } = await supabase
         .from('routes')
-        .select(`
-          id, route_name, stops,
-          vehicles(vehicle_number, driver_name, driver_phone, capacity)
-        `)
-        .eq('school_id', school.id);
+        .select(`id, route_name, stops, vehicles(vehicle_number, driver_name, driver_phone, capacity)`)
+        .eq('school_id', schoolId);
 
       if (routesData) setRoutes(routesData);
     } catch (error) {

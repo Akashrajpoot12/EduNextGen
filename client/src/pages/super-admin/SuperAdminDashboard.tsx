@@ -154,10 +154,146 @@ export function SuperAdminDashboard() {
   const [archiveModal, setArchiveModal]     = useState<any | null>(null);
   const [archiveReason, setArchiveReason]   = useState("");
 
+  // ── API Usage (WhatsApp/msg counts this month per school) ─────────────────
+  const [apiUsageMap, setApiUsageMap]       = useState<Record<string, number>>({});
+
+  // ── Computed onboarding progress per school (0–100) ───────────────────────
+  const [schoolProgressMap, setSchoolProgressMap] = useState<Record<string, number>>({});
+
   // ── GDPR Export ───────────────────────────────────────────────────────────
   const [exportingId, setExportingId]       = useState<string | null>(null);
 
-  useEffect(() => { fetchAll(); }, []);
+  // ── New-school sparkline (last 7 days) ───────────────────────────────────
+  const [signupSparkline, setSignupSparkline] = useState<number[]>([0,0,0,0,0,0,0]);
+
+  // ── School last-active map: school_id → ISO string ───────────────────────
+  const [lastActiveMap, setLastActiveMap]   = useState<Record<string, string>>({});
+
+  useEffect(() => { fetchAll(); fetchSparklineData(); fetchApiUsage(); }, []);
+
+  // ─── Sparkline + Last-Active Fetching ───────────────────────────────────────
+  async function fetchSparklineData() {
+    try {
+      // Build 7-day buckets
+      const now   = new Date();
+      const days: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        days.push(d.toISOString().slice(0, 10)); // "YYYY-MM-DD"
+      }
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      const { data: recentSchools } = await supabase
+        .from("schools")
+        .select("created_at")
+        .gte("created_at", sevenDaysAgo.toISOString());
+
+      const counts = days.map(day => {
+        return (recentSchools || []).filter(s => s.created_at.slice(0, 10) === day).length;
+      });
+      setSignupSparkline(counts);
+
+      // Fetch latest announcement per school for last-active
+      const { data: annRows } = await supabase
+        .from("announcements")
+        .select("school_id, created_at")
+        .order("created_at", { ascending: false });
+
+      if (annRows) {
+        const map: Record<string, string> = {};
+        for (const row of annRows) {
+          if (row.school_id && !map[row.school_id]) {
+            map[row.school_id] = row.created_at;
+          }
+        }
+        setLastActiveMap(map);
+      }
+    } catch (e) {
+      // non-critical — silently swallow
+    }
+  }
+
+  // ─── API Usage Fetching (WhatsApp / SMS / Announcements proxy) ──────────────
+  async function fetchApiUsage() {
+    try {
+      const firstOfMonth = new Date();
+      firstOfMonth.setDate(1);
+      firstOfMonth.setHours(0, 0, 0, 0);
+      const since = firstOfMonth.toISOString();
+
+      // Try whatsapp_logs first, fall back to sms_logs, then announcements as proxy
+      let rows: { school_id: string }[] | null = null;
+
+      const { data: waData, error: waError } = await supabase
+        .from("whatsapp_logs")
+        .select("school_id")
+        .gte("created_at", since);
+
+      if (!waError && waData) {
+        rows = waData;
+      } else {
+        const { data: smsData, error: smsError } = await supabase
+          .from("sms_logs")
+          .select("school_id")
+          .gte("created_at", since);
+
+        if (!smsError && smsData) {
+          rows = smsData;
+        } else {
+          // Use announcements as a proxy metric
+          const { data: annData } = await supabase
+            .from("announcements")
+            .select("school_id")
+            .gte("created_at", since);
+          rows = annData || [];
+        }
+      }
+
+      const usageMap: Record<string, number> = {};
+      for (const row of rows || []) {
+        if (row.school_id) {
+          usageMap[row.school_id] = (usageMap[row.school_id] || 0) + 1;
+        }
+      }
+      setApiUsageMap(usageMap);
+    } catch {
+      // non-critical
+    }
+  }
+
+  // ─── Compute onboarding progress for each school ─────────────────────────────
+  async function fetchSchoolProgress(schools: School[]) {
+    if (!schools.length) return;
+    try {
+      const [studRes, teachRes, classRes, ttRes] = await Promise.all([
+        supabase.from("students").select("school_id"),
+        supabase.from("teachers").select("school_id"),
+        supabase.from("classes").select("school_id"),
+        supabase.from("timetable").select("school_id"),
+      ]);
+
+      const hasStudents  = new Set((studRes.data  || []).map((r: any) => r.school_id));
+      const hasTeachers  = new Set((teachRes.data || []).map((r: any) => r.school_id));
+      const hasClasses   = new Set((classRes.data || []).map((r: any) => r.school_id));
+      const hasTimetable = new Set((ttRes.data    || []).map((r: any) => r.school_id));
+
+      const progressMap: Record<string, number> = {};
+      for (const school of schools) {
+        let score = 0;
+        if (hasStudents.has(school.id))  score += 25;
+        if (hasTeachers.has(school.id))  score += 25;
+        if (hasClasses.has(school.id))   score += 25;
+        if (hasTimetable.has(school.id)) score += 25;
+        progressMap[school.id] = score;
+      }
+      setSchoolProgressMap(progressMap);
+    } catch {
+      // non-critical
+    }
+  }
 
   // ─── Data Fetching ───────────────────────────────────────────────────────────
   async function fetchAll() {
@@ -179,7 +315,9 @@ export function SuperAdminDashboard() {
       if (reqRes.error) throw reqRes.error;
       if (schRes.error) throw schRes.error;
       setRequests(reqRes.data || []);
-      setSchoolsList(schRes.data || []);
+      const schoolsData = schRes.data || [];
+      setSchoolsList(schoolsData);
+      fetchSchoolProgress(schoolsData);
       setLogs(logRes.data || []);
       setPayments(payRes.data || []);
       setMonthlyRevenue(mrevRes.data || []);
@@ -676,6 +814,83 @@ export function SuperAdminDashboard() {
 
   const filteredRequests = requests.filter(r => requestFilter === "all" ? true : r.status === requestFilter);
 
+  // ── Last-active chip helper ────────────────────────────────────────────────
+  function lastActiveChip(schoolId: string) {
+    const ts = lastActiveMap[schoolId];
+    if (!ts) return null;
+    const diffMs   = Date.now() - new Date(ts).getTime();
+    const diffHrs  = Math.floor(diffMs / 3_600_000);
+    const diffDays = Math.floor(diffMs / 86_400_000);
+    let label: string;
+    if (diffHrs < 1)        label = "Active just now";
+    else if (diffHrs < 24)  label = `Active ${diffHrs}h ago`;
+    else if (diffDays === 1) label = "Active yesterday";
+    else                    label = `Active ${diffDays}d ago`;
+    const isRecent = diffHrs < 24;
+    return (
+      <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+        isRecent
+          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+          : "bg-slate-500/10 text-slate-400 border-slate-500/20"
+      }`}>
+        {label}
+      </span>
+    );
+  }
+
+  // ── Ref-callback progress bar (avoids inline style={{width}}) ────────────
+  const MSG_LIMIT = 500;
+  function apiUsageBar(schoolId: string) {
+    const count   = apiUsageMap[schoolId] || 0;
+    const pct     = Math.min(Math.round((count / MSG_LIMIT) * 100), 100);
+    const isRed   = count > 480;
+    const isAmber = count > 400;
+    const trackCls = "h-1.5 rounded-full bg-muted overflow-hidden mt-1";
+    const fillCls  = isRed
+      ? "h-full rounded-full bg-red-500"
+      : isAmber
+        ? "h-full rounded-full bg-amber-500"
+        : "h-full rounded-full bg-emerald-500";
+    const badgeCls = isRed
+      ? "px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20"
+      : isAmber
+        ? "px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        : "px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+    return (
+      <div className="min-w-[90px]">
+        <span className={badgeCls}>{count} msgs</span>
+        <div className={trackCls}>
+          <div
+            className={fillCls}
+            ref={(el) => { if (el) el.style.width = `${pct}%`; }}
+          />
+        </div>
+        <p className="text-[10px] text-slate-500 mt-0.5">{pct}% of {MSG_LIMIT}</p>
+      </div>
+    );
+  }
+
+  function onboardingBar(schoolId: string) {
+    const pct     = schoolProgressMap[schoolId] ?? null;
+    if (pct === null) return <span className="text-[10px] text-slate-600">—</span>;
+    const fillCls = pct >= 80
+      ? "h-full rounded-full bg-emerald-500"
+      : pct >= 50
+        ? "h-full rounded-full bg-amber-500"
+        : "h-full rounded-full bg-red-500";
+    return (
+      <div className="min-w-[80px]">
+        <p className="text-[10px] text-slate-400 font-semibold">{pct}% setup</p>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden mt-0.5">
+          <div
+            className={fillCls}
+            ref={(el) => { if (el) el.style.width = `${pct}%`; }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const statusColor = (status?: string) => {
     if (status === "active") return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
     if (status === "past_due") return "text-red-400 bg-red-500/10 border-red-500/20";
@@ -707,7 +922,7 @@ export function SuperAdminDashboard() {
 
         <div className="p-6 border-b border-border z-10">
           <h2 className="text-xl font-bold tracking-tight uppercase flex items-center gap-2">
-            <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">EDUNEXTGEN</span>
+            <span className="bg-gradient-to-r from-fuchsia-400 to-orange-400 bg-clip-text text-transparent">EDUNEXTGEN</span>
             <span className="text-xs font-medium text-slate-500 lowercase">saas</span>
           </h2>
           <div className="flex items-center mt-2">
@@ -814,6 +1029,48 @@ export function SuperAdminDashboard() {
                     </Card>
                   ))}
                 </div>
+
+                {/* ── New-school sparkline ── */}
+                {(() => {
+                  const weekTotal = signupSparkline.reduce((a, b) => a + b, 0);
+                  const maxVal    = Math.max(...signupSparkline, 1);
+                  const W = 120, H = 40, pad = 4;
+                  const pts = signupSparkline.map((v, i) => {
+                    const x = pad + (i / 6) * (W - pad * 2);
+                    const y = H - pad - ((v / maxVal) * (H - pad * 2));
+                    return `${x.toFixed(1)},${y.toFixed(1)}`;
+                  }).join(" ");
+                  return (
+                    <Card className="bg-card border-border shadow-xl">
+                      <CardContent className="pt-5 pb-4 flex items-center gap-6">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">Schools joined this week</p>
+                          <p className="text-3xl font-bold text-fuchsia-400">{weekTotal}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Last 7 days · today is day 7</p>
+                        </div>
+                        <div className="flex-shrink-0 text-fuchsia-500">
+                          <svg viewBox="0 0 120 40" width="120" height="40" aria-hidden="true" fill="none">
+                            <polyline
+                              points={pts}
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinejoin="round"
+                              strokeLinecap="round"
+                              fill="none"
+                            />
+                            {signupSparkline.map((v, i) => {
+                              const x = pad + (i / 6) * (W - pad * 2);
+                              const y = H - pad - ((v / maxVal) * (H - pad * 2));
+                              return v > 0 ? (
+                                <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r="3" fill="currentColor" />
+                              ) : null;
+                            })}
+                          </svg>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* Subscription Breakdown */}
                 <div className="grid gap-6 md:grid-cols-2">
@@ -1066,6 +1323,8 @@ export function SuperAdminDashboard() {
                               <th className="py-3 px-4">Admin</th>
                               <th className="py-3 px-4">Stats</th>
                               <th className="py-3 px-4">Subscription</th>
+                              <th className="py-3 px-4">API Usage</th>
+                              <th className="py-3 px-4">Onboarding</th>
                               <th className="py-3 px-4">Status</th>
                               <th className="py-3 px-4 text-right">Actions</th>
                             </tr>
@@ -1114,11 +1373,18 @@ export function SuperAdminDashboard() {
                                   )}
                                 </td>
                                 <td className="py-4 px-4">
+                                  {apiUsageBar(s.id)}
+                                </td>
+                                <td className="py-4 px-4">
+                                  {onboardingBar(s.id)}
+                                </td>
+                                <td className="py-4 px-4">
                                   {s.is_active === false ? (
                                     <span className="px-2 py-0.5 rounded text-xs font-bold border bg-red-500/10 text-red-400 border-red-500/20">Suspended</span>
                                   ) : (
                                     <span className="px-2 py-0.5 rounded text-xs font-bold border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Active</span>
                                   )}
+                                  <div>{lastActiveChip(s.id)}</div>
                                   {(s as any).payment_failure_count > 0 && (
                                     <div className="text-xs text-orange-400 mt-0.5">⚠️ {(s as any).payment_failure_count} fail(s)</div>
                                   )}
@@ -1149,16 +1415,34 @@ export function SuperAdminDashboard() {
                                       <KeyRound className="w-3 h-3" />
                                     </Button>
                                     {s.is_active === false ? (
-                                      <Button size="sm" onClick={() => handleToggleSchool(s, false)}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-xs px-1.5">
-                                        <Power className="w-3 h-3" />
-                                      </Button>
+                                      <>
+                                        <Button size="sm" onClick={() => handleToggleSchool(s, false)}
+                                          className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-xs px-1.5" title="Reactivate school">
+                                          <Power className="w-3 h-3" />
+                                        </Button>
+                                        <Button size="sm" variant="outline"
+                                          onClick={() => {
+                                            if (window.confirm(`Reactivate "${s.name}"?`)) handleToggleSchool(s, false);
+                                          }}
+                                          className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-7 text-xs px-1.5 font-semibold">
+                                          Reactivate
+                                        </Button>
+                                      </>
                                     ) : (
-                                      <Button size="sm" variant="outline"
-                                        onClick={() => setSuspendModal({ school: s })}
-                                        className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-7 text-xs px-1.5">
-                                        <Ban className="w-3 h-3" />
-                                      </Button>
+                                      <>
+                                        <Button size="sm" variant="outline"
+                                          onClick={() => setSuspendModal({ school: s })}
+                                          className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-7 text-xs px-1.5" title="Suspend school (with reason)">
+                                          <Ban className="w-3 h-3" />
+                                        </Button>
+                                        <Button size="sm" variant="outline"
+                                          onClick={() => {
+                                            if (window.confirm(`Suspend "${s.name}" immediately? No reason will be recorded.`)) handleToggleSchool(s, true);
+                                          }}
+                                          className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-7 text-xs px-1.5 font-semibold">
+                                          Suspend
+                                        </Button>
+                                      </>
                                     )}
                                   </div>
                                 </td>

@@ -1,10 +1,14 @@
-{
+﻿{
   "name": "edunextgen",
   "private": true,
   "scripts": {
     "postinstall": "npm install --prefix client",
     "dev": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
-    "preview": "npm run preview --prefix client"
+    "preview": "npm run preview --prefix client",
+    "seed": "node supabase/seed_full_demo.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2"
   }
 }

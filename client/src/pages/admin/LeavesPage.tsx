@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Search, CalendarOff, CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function LeavesPage() {
@@ -19,37 +20,16 @@ export function LeavesPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetchInitialData();
-  }, [tenant]);
+    if (schoolId) fetchLeaves();
+  }, [schoolId]);
 
-  async function fetchInitialData() {
+  async function fetchLeaves() {
     setLoading(true);
-    try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-      setSchoolId(school.id);
-
-      fetchLeaves(school.id);
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-      setLoading(false);
-    }
-  }
-
-  async function fetchLeaves(sId: string) {
     try {
       const { data } = await supabase
         .from('leave_applications')
-        .select(`
-          id, leave_type, start_date, end_date, reason, status, created_at,
-          users:user_id(full_name, email)
-        `)
-        .eq('school_id', sId)
+        .select(`id, leave_type, start_date, end_date, reason, status, created_at, users:user_id(full_name, email)`)
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
 
       if (data) setLeaves(data);
@@ -63,18 +43,34 @@ export function LeavesPage() {
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
+      // Get leave details before updating (to notify applicant)
+      const leave = leaves.find(l => l.id === id);
+
       const { error } = await supabase
         .from('leave_applications')
         .update({ status, reviewed_by: user?.id })
         .eq('id', id);
 
       if (error) throw error;
-      
-      fetchLeaves(schoolId);
+
+      toast.success(`Leave ${status}`);
+
+      // Notify applicant via announcements
+      if (leave) {
+        const emoji = status === "approved" ? "✅" : "❌";
+        await supabase.from("announcements").insert({
+          school_id: schoolId,
+          title: `${emoji} Leave ${status.charAt(0).toUpperCase() + status.slice(1)}: ${leave.leave_type}`,
+          content: `Your leave request from ${leave.start_date} to ${leave.end_date} has been ${status} by the administration.`,
+          audience: "teachers",
+          priority: status === "approved" ? "normal" : "high",
+        });
+      }
+
+      fetchLeaves();
     } catch (error: any) {
-      console.error("Error updating status:", error);
-      alert("Failed to update status: " + error.message);
+      toast.error("Failed to update status: " + error.message);
     }
   };
 

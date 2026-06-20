@@ -30,34 +30,16 @@ export function InventoryPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetchInitialData();
-  }, [tenant]);
+    if (schoolId) fetchInventory();
+  }, [schoolId]);
 
-  async function fetchInitialData() {
+  async function fetchInventory() {
     setLoading(true);
-    try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-      setSchoolId(school.id);
-
-      fetchInventory(school.id);
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-      setLoading(false);
-    }
-  }
-
-  async function fetchInventory(sId: string) {
     try {
       const { data } = await supabase
         .from('inventory_items')
         .select('*')
-        .eq('school_id', sId)
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
 
       if (data) setItems(data);
@@ -90,7 +72,7 @@ export function InventoryPage() {
       setUnitPrice("");
       setLocation("");
       setIsDialogOpen(false);
-      fetchInventory(schoolId);
+      fetchInventory();
       
     } catch (error: any) {
       console.error("Error adding item:", error);

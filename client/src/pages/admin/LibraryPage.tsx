@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
-import { Plus, Trash2, BookOpen, RotateCcw, X } from "lucide-react";
+import { Plus, Trash2, BookOpen, RotateCcw, X, ScanBarcode, Camera, CameraOff } from "lucide-react";
+import { toast } from "sonner";
 
 type LibraryBook = {
   id: string;
@@ -42,7 +43,81 @@ export function LibraryPage() {
   const [showAddBook, setShowAddBook] = useState(false);
   const [showIssueBook, setShowIssueBook] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"books" | "issues">("books");
+  const [activeTab, setActiveTab] = useState<"books" | "issues" | "scanner">("books");
+
+  // Barcode scanner state
+  const videoRef    = useRef<HTMLVideoElement>(null);
+  const streamRef   = useRef<MediaStream | null>(null);
+  const scannerRef  = useRef<any>(null);
+  const [scanActive, setScanActive]   = useState(false);
+  const [scannedISBN, setScannedISBN] = useState("");
+  const [scannedBook, setScannedBook] = useState<LibraryBook | null>(null);
+  const [scanIssueForm, setScanIssueForm] = useState({ issued_to_name: "", due_date: "" });
+  const [scanMode, setScanMode]       = useState<"issue" | "return">("issue");
+
+  async function startScanner() {
+    if (!(window as any).BarcodeDetector) {
+      toast.error("BarcodeDetector API not supported. Use Chrome/Edge on desktop.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      setScanActive(true);
+
+      const detector = new (window as any).BarcodeDetector({ formats: ["ean_13", "ean_8", "code_128", "qr_code"] });
+      scannerRef.current = setInterval(async () => {
+        if (!videoRef.current || videoRef.current.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(videoRef.current);
+          if (barcodes.length > 0) {
+            const isbn = barcodes[0].rawValue;
+            clearInterval(scannerRef.current);
+            stopScanner();
+            setScannedISBN(isbn);
+            // lookup book
+            const { data } = await supabase.from("library_books").select("*").eq("school_id", schoolId).eq("isbn", isbn).maybeSingle();
+            if (data) { setScannedBook(data); toast.success(`Book found: ${data.title}`); }
+            else toast.error(`No book found with ISBN: ${isbn}`);
+          }
+        } catch {}
+      }, 500);
+    } catch (err: any) {
+      toast.error("Camera error: " + err.message);
+    }
+  }
+
+  function stopScanner() {
+    clearInterval(scannerRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    setScanActive(false);
+  }
+
+  async function handleScanIssue() {
+    if (!scannedBook) return;
+    await supabase.from("library_issues").insert({
+      school_id: schoolId, book_id: scannedBook.id,
+      issued_to_name: scanIssueForm.issued_to_name,
+      due_date: scanIssueForm.due_date,
+      issue_date: new Date().toISOString().split("T")[0],
+      status: "issued", fine_amount: 0,
+    });
+    await supabase.from("library_books").update({ available_copies: Math.max(0, scannedBook.available_copies - 1) }).eq("id", scannedBook.id);
+    toast.success(`Book issued to ${scanIssueForm.issued_to_name}`);
+    setScannedBook(null); setScannedISBN(""); setScanIssueForm({ issued_to_name: "", due_date: "" });
+    fetchBooks(); fetchIssues();
+  }
+
+  async function handleScanReturn() {
+    if (!scannedBook) return;
+    const issue = issues.find(i => i.book_id === scannedBook.id && i.status === "issued");
+    if (!issue) { toast.error("No active issue found for this book"); return; }
+    await handleReturnBook(issue);
+    toast.success(`Book returned: ${scannedBook.title}`);
+    setScannedBook(null); setScannedISBN("");
+  }
   const [bookForm, setBookForm] = useState({ title: "", author: "", isbn: "", category: "", publisher: "", publish_year: new Date().getFullYear(), total_copies: 1, available_copies: 1, rack_location: "" });
   const [issueForm, setIssueForm] = useState({ book_id: "", student_id: "", issued_to_name: "", due_date: "" });
 
@@ -128,9 +203,15 @@ export function LibraryPage() {
       </div>
 
       <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6 w-fit">
-        {(["books", "issues"] as const).map(t => (
-          <button key={t} type="button" onClick={() => setActiveTab(t)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === t ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            {t === "books" ? "Books Catalog" : "Issue / Return"}
+        {([
+          { key: "books",   label: "Books Catalog" },
+          { key: "issues",  label: "Issue / Return" },
+          { key: "scanner", label: "Barcode Scanner" },
+        ] as const).map(({ key, label }) => (
+          <button key={key} type="button" onClick={() => { if (key !== "scanner") stopScanner(); setActiveTab(key); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${activeTab === key ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            {key === "scanner" && <ScanBarcode className="w-3.5 h-3.5" />}
+            {label}
           </button>
         ))}
       </div>
@@ -212,6 +293,131 @@ export function LibraryPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ── Barcode Scanner Tab ── */}
+      {activeTab === "scanner" && (
+        <div className="space-y-4 max-w-xl">
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">Barcode / ISBN Scanner</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Point camera at book barcode to issue or return</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => setScanMode("issue")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${scanMode === "issue" ? "bg-emerald-500 text-white border-emerald-500" : "border-border hover:bg-muted"}`}>
+                  Issue
+                </button>
+                <button type="button"
+                  onClick={() => setScanMode("return")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${scanMode === "return" ? "bg-blue-500 text-white border-blue-500" : "border-border hover:bg-muted"}`}>
+                  Return
+                </button>
+              </div>
+            </div>
+
+            {/* Camera preview */}
+            <div className="relative bg-slate-950 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+              <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${scanActive ? "block" : "hidden"}`} />
+              {!scanActive && (
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                  <Camera className="w-10 h-10 opacity-40" />
+                  <p className="text-xs">Camera inactive</p>
+                </div>
+              )}
+              {scanActive && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-48 h-24 border-2 border-emerald-400 rounded-lg opacity-70" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              {!scanActive ? (
+                <button type="button" onClick={startScanner}
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg py-2 text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+                  <Camera className="w-4 h-4" /> Start Scanner
+                </button>
+              ) : (
+                <button type="button" onClick={stopScanner}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-2 text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+                  <CameraOff className="w-4 h-4" /> Stop Scanner
+                </button>
+              )}
+            </div>
+
+            {/* Manual ISBN input */}
+            <div className="flex gap-2">
+              <input value={scannedISBN} onChange={e => setScannedISBN(e.target.value)}
+                placeholder="Or type ISBN manually..."
+                className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <button type="button"
+                onClick={async () => {
+                  const { data } = await supabase.from("library_books").select("*").eq("school_id", schoolId).eq("isbn", scannedISBN).maybeSingle();
+                  if (data) { setScannedBook(data); toast.success(`Book: ${data.title}`); }
+                  else toast.error("No book found with this ISBN");
+                }}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors">
+                Lookup
+              </button>
+            </div>
+          </div>
+
+          {/* Book found card */}
+          {scannedBook && (
+            <div className="bg-card border border-emerald-500/30 rounded-xl p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold">{scannedBook.title}</p>
+                  <p className="text-sm text-muted-foreground">{scannedBook.author} · ISBN: {scannedBook.isbn}</p>
+                  <p className="text-xs mt-1">
+                    <span className={scannedBook.available_copies > 0 ? "text-emerald-600" : "text-red-500"}>
+                      {scannedBook.available_copies} available
+                    </span>
+                    {" "}/ {scannedBook.total_copies} total
+                  </p>
+                </div>
+              </div>
+
+              {scanMode === "issue" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Issued To (Student Name) *</label>
+                    <input value={scanIssueForm.issued_to_name} onChange={e => setScanIssueForm(f => ({ ...f, issued_to_name: e.target.value }))}
+                      placeholder="Student full name"
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Due Date *</label>
+                    <input type="date" title="Due date" value={scanIssueForm.due_date} onChange={e => setScanIssueForm(f => ({ ...f, due_date: e.target.value }))}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <button type="button" onClick={handleScanIssue} disabled={!scanIssueForm.issued_to_name || !scanIssueForm.due_date || scannedBook.available_copies === 0}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg py-2 text-sm font-medium transition-colors disabled:opacity-50">
+                    {scannedBook.available_copies === 0 ? "No copies available" : "Issue Book"}
+                  </button>
+                </div>
+              )}
+
+              {scanMode === "return" && (
+                <button type="button" onClick={handleScanReturn}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+                  Return This Book
+                </button>
+              )}
+
+              <button type="button" onClick={() => { setScannedBook(null); setScannedISBN(""); }}
+                className="w-full border border-border text-muted-foreground rounded-lg py-2 text-sm hover:bg-muted transition-colors">
+                Clear
+              </button>
+            </div>
+          )}
         </div>
       )}
 

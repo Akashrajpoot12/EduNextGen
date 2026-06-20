@@ -27,7 +27,7 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
     // ── 1. Dashboard ─────────────────────────────────────────────
     {
       group: "Dashboard",
-      color: "text-indigo-500",
+      color: "text-violet-400",
       items: [
         { name: "Overview",       href: `/${tenant}/admin`,              icon: LayoutDashboard },
         { name: "Analytics",      href: `/${tenant}/admin/analytics`,    icon: BarChart3 },
@@ -37,7 +37,7 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
     // ── 2. Students ───────────────────────────────────────────────
     {
       group: "Students",
-      color: "text-sky-500",
+      color: "text-pink-400",
       items: [
         { name: "All Students",    href: `/${tenant}/admin/students`,          icon: Users },
         { name: "Admissions",      href: `/${tenant}/admin/admissions`,        icon: UserPlus },
@@ -53,7 +53,7 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
     // ── 3. Academics ──────────────────────────────────────────────
     {
       group: "Academics",
-      color: "text-emerald-500",
+      color: "text-amber-400",
       items: [
         { name: "Classes",        href: `/${tenant}/admin/classes`,        icon: BookMarked },
         { name: "Teachers",       href: `/${tenant}/admin/teachers`,       icon: GraduationCap },
@@ -72,7 +72,7 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
     // ── 4. Staff & HR ─────────────────────────────────────────────
     {
       group: "Staff & HR",
-      color: "text-blue-500",
+      color: "text-violet-400",
       items: [
         { name: "Staff Directory", href: `/${tenant}/admin/staff`,             icon: UserSquare2 },
         { name: "Staff Attendance",href: `/${tenant}/admin/staff-attendance`,  icon: CheckSquare },
@@ -101,7 +101,7 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
     // ── 6. Office ─────────────────────────────────────────────────
     {
       group: "Office",
-      color: "text-violet-500",
+      color: "text-purple-400",
       items: [
         { name: "Announcements",  href: `/${tenant}/admin/announcements`,      icon: Bell },
         { name: "Circulars",      href: `/${tenant}/admin/circulars`,          icon: Newspaper },
@@ -111,12 +111,13 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
         { name: "Complaint Reg.", href: `/${tenant}/admin/complaints`,         icon: MessageCircleWarning },
         { name: "Documents",      href: `/${tenant}/admin/documents`,          icon: Files },
         { name: "Communication",  href: `/${tenant}/admin/communication`,      icon: MessageSquare },
+        { name: "WA Templates",   href: `/${tenant}/admin/message-templates`,  icon: MessageSquare },
       ],
     },
     // ── 7. Services ───────────────────────────────────────────────
     {
       group: "Services",
-      color: "text-purple-500",
+      color: "text-fuchsia-400",
       items: [
         { name: "Library",        href: `/${tenant}/admin/library`,       icon: Library },
         { name: "Library Cards",  href: `/${tenant}/admin/library-cards`, icon: LibCard },
@@ -131,7 +132,7 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
     // ── 8. Community ──────────────────────────────────────────────
     {
       group: "Community",
-      color: "text-rose-500",
+      color: "text-orange-400",
       items: [
         { name: "Bulk Messages",  href: `/${tenant}/admin/bulk-messages`, icon: Send },
         { name: "Parent Log",     href: `/${tenant}/admin/parent-log`,    icon: MessageSquare },
@@ -143,21 +144,33 @@ function buildAdminRoutes(tenant: string): NavGroup[] {
 }
 
 const activeGroupBg: Record<string, string> = {
+  "text-violet-400":  "from-violet-500/20 border-violet-400",
+  "text-pink-400":    "from-pink-500/20 border-pink-400",
+  "text-amber-400":   "from-amber-500/20 border-amber-400",
+  "text-amber-500":   "from-amber-500/20 border-amber-400",
+  "text-purple-400":  "from-purple-500/20 border-purple-400",
+  "text-fuchsia-400": "from-fuchsia-500/20 border-fuchsia-400",
+  "text-orange-400":  "from-orange-500/20 border-orange-400",
   "text-indigo-500":  "from-indigo-500/15 border-indigo-400",
   "text-sky-500":     "from-sky-500/15 border-sky-400",
   "text-emerald-500": "from-emerald-500/15 border-emerald-400",
   "text-blue-500":    "from-blue-500/15 border-blue-400",
-  "text-amber-500":   "from-amber-500/15 border-amber-400",
   "text-violet-500":  "from-violet-500/15 border-violet-400",
   "text-purple-500":  "from-purple-500/15 border-purple-400",
   "text-rose-500":    "from-rose-500/15 border-rose-400",
 };
 const activeGroupIcon: Record<string, string> = {
+  "text-violet-400":  "text-violet-300 drop-shadow-[0_0_6px_rgba(167,139,250,0.6)]",
+  "text-pink-400":    "text-pink-300 drop-shadow-[0_0_6px_rgba(249,168,212,0.6)]",
+  "text-amber-400":   "text-amber-300 drop-shadow-[0_0_6px_rgba(252,211,77,0.6)]",
+  "text-amber-500":   "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]",
+  "text-purple-400":  "text-purple-300 drop-shadow-[0_0_6px_rgba(216,180,254,0.6)]",
+  "text-fuchsia-400": "text-fuchsia-300 drop-shadow-[0_0_6px_rgba(240,171,252,0.6)]",
+  "text-orange-400":  "text-orange-300 drop-shadow-[0_0_6px_rgba(253,186,116,0.6)]",
   "text-indigo-500":  "text-indigo-400 drop-shadow-[0_0_6px_rgba(99,102,241,0.5)]",
   "text-sky-500":     "text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.5)]",
   "text-emerald-500": "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]",
   "text-blue-500":    "text-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.5)]",
-  "text-amber-500":   "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]",
   "text-violet-500":  "text-violet-400 drop-shadow-[0_0_6px_rgba(167,139,250,0.5)]",
   "text-purple-500":  "text-purple-400 drop-shadow-[0_0_6px_rgba(167,139,250,0.5)]",
   "text-rose-500":    "text-rose-400 drop-shadow-[0_0_6px_rgba(251,113,133,0.5)]",
@@ -192,10 +205,10 @@ export function TenantSidebar() {
   const isParentPortal  = pathname.includes(`/${tenant}/parent`);
 
   let portalLabel = "Admin";
-  let portalColor = "bg-indigo-500/20 text-indigo-400 border-indigo-500/30";
-  if (isTeacherPortal) { portalLabel = "Teacher"; portalColor = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"; }
-  if (isStudentPortal) { portalLabel = "Student";  portalColor = "bg-sky-500/20 text-sky-400 border-sky-500/30"; }
-  if (isParentPortal)  { portalLabel = "Parent";   portalColor = "bg-purple-500/20 text-purple-400 border-purple-500/30"; }
+  let portalColor = "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30";
+  if (isTeacherPortal) { portalLabel = "Teacher"; portalColor = "bg-violet-500/20 text-violet-300 border-violet-500/30"; }
+  if (isStudentPortal) { portalLabel = "Student";  portalColor = "bg-amber-500/20 text-amber-300 border-amber-500/30"; }
+  if (isParentPortal)  { portalLabel = "Parent";   portalColor = "bg-orange-500/20 text-orange-300 border-orange-500/30"; }
 
   // Flat routes for non-admin portals
   const flatRoutes: NavItem[] = isTeacherPortal ? [
@@ -229,7 +242,7 @@ export function TenantSidebar() {
       {/* Logo */}
       <div className="px-5 py-4 border-b border-border/60 sticky top-0 bg-sidebar z-10">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 flex items-center justify-center shadow-lg">
             <span className="text-white text-xs font-black">E</span>
           </div>
           <div>
@@ -276,7 +289,7 @@ export function TenantSidebar() {
                       <div className="space-y-0.5 pl-1">
                         {grp.items.map((item, idx) => {
                           const active = isItemActive(item.href);
-                          const activeBg = activeGroupBg[grp.color] || "from-indigo-500/15 border-indigo-400";
+                          const activeBg = activeGroupBg[grp.color] || "from-fuchsia-500/20 border-fuchsia-400";
                           const activeIcon = activeGroupIcon[grp.color] || "text-indigo-400";
                           return (
                             <motion.div
@@ -334,7 +347,7 @@ export function TenantSidebar() {
                   {active && (
                     <motion.div
                       layoutId="sidebar-active-flat"
-                      className="absolute inset-0 bg-gradient-to-r from-indigo-500/15 to-transparent border-l-2 border-indigo-400 rounded-lg"
+                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent border-l-2 border-fuchsia-400 rounded-lg"
                       initial={false}
                       transition={{ type: "spring", stiffness: 350, damping: 35 }}
                     />

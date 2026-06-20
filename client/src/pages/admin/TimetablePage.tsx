@@ -41,8 +41,8 @@ export function TimetablePage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetchInitialData();
-  }, [tenant]);
+    if (schoolId) fetchInitialData();
+  }, [schoolId]);
 
   useEffect(() => {
     if (selectedClassId) {
@@ -55,33 +55,12 @@ export function TimetablePage() {
   async function fetchInitialData() {
     setLoading(true);
     try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-      setSchoolId(school.id);
-
-      const { data: classesData } = await supabase
-        .from('classes')
-        .select('id, grade_level, section')
-        .eq('school_id', school.id)
-        .order('grade_level', { ascending: true });
-
+      const [{ data: classesData }, { data: teachersData }] = await Promise.all([
+        supabase.from('classes').select('id, grade_level, section').eq('school_id', schoolId).order('grade_level'),
+        supabase.from('users').select('id, name, full_name').eq('school_id', schoolId).eq('role', 'teacher'),
+      ]);
       if (classesData) setClasses(classesData);
-
-      const { data: teachersData } = await supabase
-        .from('user_roles')
-        .select('user_id, users(full_name)')
-        .eq('school_id', school.id)
-        .eq('role', 'teacher');
-
-      if (teachersData) {
-        setTeachers(teachersData.map(t => ({ id: t.user_id, name: t.users?.full_name })));
-      }
-
+      if (teachersData) setTeachers(teachersData.map(t => ({ id: t.id, name: t.name || t.full_name })));
     } catch (error) {
       console.error("Error fetching initial data:", error);
     } finally {

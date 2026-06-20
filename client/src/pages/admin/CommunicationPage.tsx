@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, Search, Send, MessageSquare, Mail, Smartphone } from "lucide-react";
+import { Loader2, Send, MessageSquare, Mail, Smartphone, MessageCircle, CalendarX, Wallet, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 export function CommunicationPage() {
   const { tenantId: schoolId } = useTenant();
@@ -25,41 +26,21 @@ export function CommunicationPage() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sendingWA, setSendingWA] = useState<string | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
-    fetchInitialData();
-  }, [tenant]);
+    if (schoolId) fetchMessages();
+  }, [schoolId]);
 
-  async function fetchInitialData() {
+  async function fetchMessages() {
     setLoading(true);
-    try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-      setSchoolId(school.id);
-
-      fetchMessages(school.id);
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-      setLoading(false);
-    }
-  }
-
-  async function fetchMessages(sId: string) {
     try {
       const { data } = await supabase
         .from('communications')
-        .select(`
-          id, recipient_type, message_type, subject, body, status, created_at,
-          sender:sender_id(full_name)
-        `)
-        .eq('school_id', sId)
+        .select(`id, recipient_type, message_type, subject, body, status, created_at, sender:sender_id(full_name)`)
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
 
       if (data) setMessages(data);
@@ -97,7 +78,7 @@ export function CommunicationPage() {
       setSubject("");
       setBody("");
       setIsDialogOpen(false);
-      fetchMessages(schoolId);
+      fetchMessages();
       
     } catch (error: any) {
       console.error("Error sending message:", error);
@@ -120,6 +101,32 @@ export function CommunicationPage() {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
+
+  async function sendWhatsAppAlert(type: string, label: string, extraPayload?: any) {
+    setSendingWA(type);
+    const toastId = toast.loading(`Sending ${label}...`);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ type, schoolId, data: extraPayload || {} }),
+        }
+      );
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast.success(`${label}: ${result.sent} sent, ${result.failed} failed`, { id: toastId });
+    } catch (err: any) {
+      toast.error("Failed: " + err.message, { id: toastId });
+    }
+    setSendingWA(null);
+  }
 
   return (
     <div className="space-y-6">
@@ -202,6 +209,77 @@ export function CommunicationPage() {
             </form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* WhatsApp Quick Actions */}
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <MessageCircle className="w-5 h-5 text-green-400" /> WhatsApp Bulk Alerts
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Absent Alert */}
+          <div className="bg-slate-900/50 border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+            <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+              <CalendarX className="w-5 h-5 text-red-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-white">Absent Alert Today</p>
+              <p className="text-xs text-slate-400 mt-0.5">Send WhatsApp to parents of all students absent today</p>
+            </div>
+            <Button
+              onClick={() => sendWhatsAppAlert("absent_alert", "Absent Alert")}
+              disabled={sendingWA !== null}
+              className="bg-green-600 hover:bg-green-700 text-white w-full mt-auto"
+            >
+              {sendingWA === "absent_alert"
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                : <><Send className="w-4 h-4 mr-2" /> Send Alert</>}
+            </Button>
+          </div>
+
+          {/* Fees Due */}
+          <div className="bg-slate-900/50 border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-white">Fees Due Reminder</p>
+              <p className="text-xs text-slate-400 mt-0.5">Remind parents of all overdue fee assignments via WhatsApp</p>
+            </div>
+            <Button
+              onClick={() => sendWhatsAppAlert("fees_due", "Fees Reminder")}
+              disabled={sendingWA !== null}
+              className="bg-green-600 hover:bg-green-700 text-white w-full mt-auto"
+            >
+              {sendingWA === "fees_due"
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                : <><Send className="w-4 h-4 mr-2" /> Send Reminder</>}
+            </Button>
+          </div>
+
+          {/* Custom */}
+          <div className="bg-slate-900/50 border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-white">Custom Broadcast</p>
+              <p className="text-xs text-slate-400 mt-0.5">Compose and send a custom WhatsApp message to all parents</p>
+            </div>
+            <Button
+              onClick={() => setIsDialogOpen(true)}
+              disabled={sendingWA !== null}
+              variant="outline"
+              className="border-white/20 text-white hover:bg-slate-800 w-full mt-auto"
+            >
+              <Send className="w-4 h-4 mr-2" /> Compose
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-white/5 pt-2">
+        <h2 className="text-lg font-semibold text-white mb-4">Message History</h2>
       </div>
 
       {loading ? (

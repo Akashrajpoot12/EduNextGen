@@ -39,52 +39,81 @@ export function LoginForm() {
     const userId = authData.user?.id;
     if (userId) {
       try {
-        // 1. Resolve school from subdomain
+        // 1. Resolve school from subdomain (maybeSingle to avoid throwing)
         const { data: school } = await supabase
           .from('schools')
           .select('id')
           .eq('subdomain', params.tenantId)
-          .single();
+          .maybeSingle();
 
         if (school) {
-          // 1.5 Map Auth User to Public User via Email (handles pre-provisioned accounts)
-          const { data: publicUser } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', email)
-            .limit(1)
-            .maybeSingle();
-
-          const mappedUserId = publicUser?.id || userId;
-
-          // 2. Fetch role for this school
+          // 2. Try user_roles with auth UID directly
           const { data: roleData } = await supabase
             .from('user_roles')
             .select('role')
-            .eq('user_id', mappedUserId)
+            .eq('user_id', userId)
             .eq('school_id', school.id)
             .limit(1)
             .maybeSingle();
 
           if (roleData) {
-            const role = roleData.role;
-            if (role === 'school_admin' || role === 'admin') {
-              navigate(`/${params.tenantId}/admin`);
-            } else if (role === 'teacher') {
-              navigate(`/${params.tenantId}/teacher`);
-            } else if (role === 'student') {
-              navigate(`/${params.tenantId}/student`);
-            } else if (role === 'parent') {
-              navigate(`/${params.tenantId}/parent`);
-            } else {
-              navigate(`/${params.tenantId}/admin`);
+            redirectByRole(roleData.role);
+            setIsLoading(false);
+            return;
+          }
+
+          // 3. Fallback: check users table by email (handles pre-provisioned accounts
+          //    where user_roles was inserted with a different UUID before auth signup)
+          const { data: publicUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+
+          if (publicUser && publicUser.id !== userId) {
+            const { data: roleData2 } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', publicUser.id)
+              .eq('school_id', school.id)
+              .limit(1)
+              .maybeSingle();
+
+            if (roleData2) {
+              redirectByRole(roleData2.role);
+              setIsLoading(false);
+              return;
             }
+          }
+
+          // 4. Fallback: check students table directly (bypasses user_roles UUID mismatch)
+          const { data: studentRec } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (studentRec) {
+            navigate(`/${params.tenantId}/student`);
+            setIsLoading(false);
+            return;
+          }
+
+          // 5. Fallback: check teachers/staff table
+          const { data: teacherRec } = await supabase
+            .from('teachers')
+            .select('user_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (teacherRec) {
+            navigate(`/${params.tenantId}/teacher`);
             setIsLoading(false);
             return;
           }
         }
 
-        // 3. Fallback: check if global super_admin
+        // 6. Check super_admin
         const { data: superAdminRole } = await supabase
           .from('user_roles')
           .select('role')
@@ -99,26 +128,6 @@ export function LoginForm() {
           return;
         }
 
-        // 4. Auto-provision school for demo purposes if it doesn't exist
-        if (!school && params.tenantId === 'gems') {
-           const { data: newSchool, error: createError } = await supabase
-             .from('schools')
-             .insert({ name: 'GEMS Education Demo', subdomain: 'gems' })
-             .select('id')
-             .single();
-             
-           if (newSchool) {
-             await supabase.from('user_roles').insert({
-               user_id: userId,
-               school_id: newSchool.id,
-               role: 'school_admin'
-             });
-             navigate(`/${params.tenantId}/admin`);
-             setIsLoading(false);
-             return;
-           }
-        }
-
       } catch (err) {
         console.error("Error detecting user role:", err);
       }
@@ -126,6 +135,20 @@ export function LoginForm() {
 
     setError("Invalid school portal or unauthorized access. Please check the URL.");
     setIsLoading(false);
+
+    function redirectByRole(role: string) {
+      if (role === 'school_admin' || role === 'admin' || role === 'staff') {
+        navigate(`/${params.tenantId}/admin`);
+      } else if (role === 'teacher') {
+        navigate(`/${params.tenantId}/teacher`);
+      } else if (role === 'student') {
+        navigate(`/${params.tenantId}/student`);
+      } else if (role === 'parent') {
+        navigate(`/${params.tenantId}/parent`);
+      } else {
+        navigate(`/${params.tenantId}/admin`);
+      }
+    }
   }
 
   return (
@@ -167,7 +190,7 @@ export function LoginForm() {
             Is this a newly provisioned school? <br/>
             <button 
               type="button" 
-              className="text-emerald-500 font-bold hover:underline mt-1"
+              className="text-fuchsia-400 font-bold hover:underline mt-1"
               onClick={async () => {
                 if(!email || !password) {
                   setError("Please enter email and password to initialize your account.");

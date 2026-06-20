@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useParams, Outlet, useNavigate } from "react-router-dom";
 import { TenantSidebar } from "@/components/tenant-sidebar";
+import { TeacherSidebar } from "@/components/teacher-sidebar";
+import { ParentSidebar } from "@/components/parent-sidebar";
+import { StudentSidebar } from "@/components/student-sidebar";
 import { GlobalTopbar } from "@/components/global-topbar";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { createClient } from "@/lib/supabase/client";
@@ -105,14 +108,23 @@ export function useTenant() {
   return useContext(TenantContext);
 }
 
+function RoleSidebar() {
+  const { role, subdomain } = useTenant();
+  const tenant = subdomain || "";
+  if (role === "teacher") return <TeacherSidebar tenant={tenant} />;
+  if (role === "parent")  return <ParentSidebar tenant={tenant} />;
+  if (role === "student") return <StudentSidebar tenant={tenant} />;
+  return <TenantSidebar />;
+}
+
 export function DashboardLayout() {
   return (
     <TenantProvider>
       <div className="flex h-screen overflow-hidden bg-background">
-        <TenantSidebar />
+        <RoleSidebar />
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none dark:mix-blend-screen" />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none dark:mix-blend-screen" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-fuchsia-500/8 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-orange-500/6 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
 
           <GlobalTopbar />
           

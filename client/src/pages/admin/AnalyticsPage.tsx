@@ -20,20 +20,12 @@ export function AnalyticsPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [tenant]);
+    if (schoolId) fetchAnalytics();
+  }, [schoolId]);
 
   async function fetchAnalytics() {
     setLoading(true);
     try {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-
       // Parallel data fetching for performance
       const [
         { count: studentsCount },
@@ -41,10 +33,10 @@ export function AnalyticsPage() {
         { data: feesData },
         { count: classesCount }
       ] = await Promise.all([
-        supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', school.id),
-        supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('school_id', school.id).eq('role', 'teacher'),
-        supabase.from('fee_payments').select('amount').eq('school_id', school.id).eq('status', 'paid'),
-        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('school_id', school.id)
+        supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher'),
+        supabase.from('fee_payments').select('amount').eq('school_id', schoolId).eq('status', 'paid'),
+        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('school_id', schoolId)
       ]);
 
       const totalFees = feesData ? feesData.reduce((acc, curr) => acc + Number(curr.amount), 0) : 0;

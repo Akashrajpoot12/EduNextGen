@@ -66,8 +66,8 @@ export function StudentNoticesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Notice Board</h1>
-          <p className="text-sm text-slate-400 mt-1">Important announcements and updates from the school.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Notice Board</h1>
+          <p className="text-sm text-muted-foreground mt-1">Important announcements and updates from the school.</p>
         </div>
       </div>
 
@@ -76,10 +76,10 @@ export function StudentNoticesPage() {
           <Loader2 className="w-8 h-8 animate-spin text-purple-500/50" />
         </div>
       ) : notices.length === 0 ? (
-        <div className="text-center py-12 bg-slate-900/50 rounded-xl border border-white/10 shadow-xl">
-          <Bell className="w-12 h-12 text-slate-500 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-bold text-white mb-1">No new notices</h3>
-          <p className="text-slate-400 text-sm">You're all caught up with school announcements.</p>
+        <div className="text-center py-12 bg-gradient-to-br from-fuchsia-500/10 via-purple-500/5 to-orange-500/10 rounded-2xl border border-fuchsia-500/20 shadow-xl">
+          <Bell className="w-12 h-12 text-fuchsia-400 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-foreground mb-1">No new notices</h3>
+          <p className="text-muted-foreground text-sm">You're all caught up with school announcements.</p>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
@@ -91,12 +91,12 @@ export function StudentNoticesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl hover:bg-white/[0.02] transition-colors h-full flex flex-col">
+                <Card className="bg-card backdrop-blur-xl border-border shadow-xl hover:bg-muted/30 transition-colors h-full flex flex-col">
                   <CardContent className="p-6 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-white/5">
-                          <Megaphone className="w-5 h-5 text-slate-400" />
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center border border-border/50">
+                          <Megaphone className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <div>
                           <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${getPriorityColor(notice.priority)}`}>
@@ -104,15 +104,15 @@ export function StudentNoticesPage() {
                           </span>
                         </div>
                       </div>
-                      <span className="text-xs text-slate-500 font-mono">
+                      <span className="text-xs text-muted-foreground font-mono">
                         {formatDate(notice.created_at)}
                       </span>
                     </div>
-                    
-                    <h3 className="text-xl font-bold text-white mb-3">{notice.title}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed flex-grow">{notice.content}</p>
-                    
-                    <div className="mt-6 pt-4 border-t border-white/5 text-xs text-slate-500">
+
+                    <h3 className="text-xl font-bold text-foreground mb-3">{notice.title}</h3>
+                    <p className="text-sm text-foreground/80 leading-relaxed flex-grow">{notice.content}</p>
+
+                    <div className="mt-6 pt-4 border-t border-border/50 text-xs text-muted-foreground">
                       Posted by {notice.author?.full_name || 'School Administration'}
                     </div>
                   </CardContent>

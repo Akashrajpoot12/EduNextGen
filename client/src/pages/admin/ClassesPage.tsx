@@ -29,43 +29,29 @@ export function ClassesPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetchData();
-  }, [tenant]);
+    if (schoolId) fetchData();
+  }, [schoolId]);
 
   async function fetchData() {
     setLoading(true);
     try {
-      // 1. Get school ID
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('subdomain', tenant)
-        .single();
-
-      if (!school) return;
-
-      // 2. Fetch classes
+      // Fetch classes
       const { data: classesData } = await supabase
         .from('classes')
-        .select(`
-          id, grade_level, section, created_at,
-          users:class_teacher_id(id, full_name, email)
-        `)
-        .eq('school_id', school.id)
+        .select(`id, grade_level, section, created_at, users:class_teacher_id(id, full_name, email)`)
+        .eq('school_id', schoolId)
         .order('grade_level', { ascending: true });
 
       if (classesData) setClasses(classesData);
 
-      // 3. Fetch teachers for the dropdown
+      // Fetch teachers for the dropdown
       const { data: teachersData } = await supabase
-        .from('user_roles')
-        .select('user_id, role, users(id, email, full_name)')
-        .eq('school_id', school.id)
+        .from('users')
+        .select('id, email, name, full_name')
+        .eq('school_id', schoolId)
         .eq('role', 'teacher');
 
-      if (teachersData) {
-        setTeachers(teachersData.map(t => t.users).filter(Boolean));
-      }
+      if (teachersData) setTeachers(teachersData);
     } catch (error) {
       console.error("Error fetching classes:", error);
     } finally {
@@ -76,13 +62,10 @@ export function ClassesPage() {
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    try {
-      const { data: school } = await supabase.from('schools').select('id').eq('subdomain', tenant).single();
-      if (!school) throw new Error("School not found");
 
+    try {
       const insertData: any = {
-        school_id: school.id,
+        school_id: schoolId,
         grade_level: gradeLevel,
         section: section,
       };
@@ -91,10 +74,25 @@ export function ClassesPage() {
         insertData.class_teacher_id = teacherId;
       }
 
-      const { error } = await supabase.from('classes').insert(insertData);
-      
+      const { data: newClass, error } = await supabase
+        .from('classes')
+        .insert(insertData)
+        .select()
+        .single();
+
       if (error) throw error;
-      
+
+      // Notify the assigned teacher via announcements
+      if (teacherId !== "unassigned" && newClass) {
+        await supabase.from('announcements').insert({
+          school_id: schoolId,
+          title: `Class Assignment: Grade ${gradeLevel}-${section}`,
+          content: `You have been assigned as Class Teacher for Grade ${gradeLevel}, Section ${section}. Please check your dashboard for student list and timetable.`,
+          audience: 'teachers',
+          priority: 'high',
+        });
+      }
+
       // Reset form and reload
       setGradeLevel("");
       setSection("");

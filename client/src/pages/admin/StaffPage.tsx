@@ -56,28 +56,28 @@ export function StaffPage() {
     setSaving(true);
     setError("");
     try {
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.tempPassword,
-        options: { data: { full_name: form.name } },
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.tempPassword,
+          name: form.name,
+          school_id: schoolId,
+          role: form.role,
+          phone: form.phone || null,
+          department: form.department || null,
+          qualification: form.qualification || null,
+          joining_date: form.joining_date || null,
+        }),
       });
-      if (authErr) throw new Error(authErr.message);
-      if (!authData.user) throw new Error("User creation failed.");
-
-      const uid = authData.user.id;
-
-      const { error: uErr } = await supabase.from("users").upsert({
-        id: uid, email: form.email, full_name: form.name, name: form.name,
-        school_id: schoolId, role: form.role,
-        phone: form.phone || null, department: form.department || null,
-        qualification: form.qualification || null, joining_date: form.joining_date || null,
-      }, { onConflict: "id" });
-      if (uErr) throw new Error(uErr.message);
-
-      await supabase.from("user_roles").upsert(
-        { user_id: uid, school_id: schoolId, role: form.role },
-        { onConflict: "user_id,school_id,role" }
-      );
+      const result = await res.json();
+      if (!res.ok || result.error) throw new Error(result.error || "User creation failed.");
 
       setCreatedCreds({ email: form.email, password: form.tempPassword });
       setShowForm(false);

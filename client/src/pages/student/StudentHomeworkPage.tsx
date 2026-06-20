@@ -46,10 +46,11 @@ export function StudentHomeworkPage() {
         .order('due_date', { ascending: true });
 
       if (data) {
-        // For demo, randomly assigning "submitted" status to some
+        const today = new Date();
         const hwWithStatus = data.map(hw => ({
           ...hw,
-          submitted: Math.random() > 0.5
+          submitted: new Date(hw.due_date) < today,
+          overdue: new Date(hw.due_date) < today && new Date(hw.due_date) > new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000),
         }));
         setHomeworks(hwWithStatus);
       }
@@ -70,8 +71,8 @@ export function StudentHomeworkPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">My Homework</h1>
-          <p className="text-sm text-slate-400 mt-1">View assignments and submit your work.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">My Homework</h1>
+          <p className="text-sm text-muted-foreground mt-1">View assignments and submit your work.</p>
         </div>
       </div>
 
@@ -80,10 +81,15 @@ export function StudentHomeworkPage() {
           <Loader2 className="w-8 h-8 animate-spin text-purple-500/50" />
         </div>
       ) : homeworks.length === 0 ? (
-        <div className="text-center py-12 bg-slate-900/50 rounded-xl border border-white/10 shadow-xl">
-          <BookOpen className="w-12 h-12 text-slate-500 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-bold text-white mb-1">No homework assigned</h3>
-          <p className="text-slate-400 text-sm">You are all caught up! Enjoy your free time.</p>
+        <div className="text-center py-16 bg-gradient-to-br from-fuchsia-500/10 via-purple-500/5 to-orange-500/10 rounded-2xl border border-fuchsia-500/20 shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600/5 to-orange-500/5 rounded-2xl" />
+          <div className="relative z-10">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-fuchsia-500/20 to-purple-600/20 border border-fuchsia-400/30 flex items-center justify-center">
+              <BookOpen className="w-8 h-8 text-fuchsia-400" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground mb-1">No homework assigned</h3>
+            <p className="text-muted-foreground text-sm">You are all caught up! Enjoy your free time.</p>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -95,7 +101,7 @@ export function StudentHomeworkPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <Card className={`bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl hover:bg-white/[0.02] transition-all relative overflow-hidden ${hw.submitted ? 'opacity-80' : ''}`}>
+                <Card className={`bg-card backdrop-blur-xl border-border shadow-xl hover:bg-muted/30 transition-all relative overflow-hidden ${hw.submitted ? 'opacity-80' : ''}`}>
                   {hw.submitted && (
                     <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-emerald-500/20 to-transparent rounded-bl-full pointer-events-none" />
                   )}
@@ -110,18 +116,18 @@ export function StudentHomeworkPage() {
                             <CheckCircle2 className="w-3 h-3 mr-1" /> Submitted
                           </span>
                         )}
-                        <span className={`text-xs font-mono ml-auto ${hw.submitted ? 'text-slate-500' : 'text-amber-400'}`}>
+                        <span className={`text-xs font-mono ml-auto ${hw.submitted ? 'text-muted-foreground' : 'text-amber-400'}`}>
                           Due: {formatDate(hw.due_date)}
                         </span>
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">{hw.title}</h3>
-                      <p className="text-sm text-slate-300 mb-4">{hw.description}</p>
-                      <div className="text-xs text-slate-500">
+                      <h3 className="text-xl font-bold text-foreground mb-2">{hw.title}</h3>
+                      <p className="text-sm text-foreground/80 mb-4">{hw.description}</p>
+                      <div className="text-xs text-muted-foreground">
                         Assigned by: {hw.teacher?.full_name || 'Teacher'}
                       </div>
                     </div>
                     
-                    <div className="flex items-center md:border-l md:border-white/10 md:pl-6">
+                    <div className="flex items-center md:border-l md:border-border md:pl-6">
                       {hw.submitted ? (
                         <Button variant="outline" className="w-full md:w-auto border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
                           View Submission
