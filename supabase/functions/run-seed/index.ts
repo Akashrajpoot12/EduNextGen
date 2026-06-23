@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jsonError, verifyCaller } from "../_shared/auth.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -47,6 +48,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
+    // ── Authorization ─────────────────────────────────────────────────────────
+    // Destructive demo seeder — super_admin only.
+    const caller = await verifyCaller(req);
+    if (!caller) return jsonError("Unauthorized", 401);
+    if (!caller.isSuperAdmin) return jsonError("Forbidden: super admin only", 403);
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
