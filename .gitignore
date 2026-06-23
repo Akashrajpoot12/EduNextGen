@@ -6,6 +6,10 @@
 .env.test.local
 .env.production.local
 
+# Secrets / credentials — never commit
+credentials.md
+**/credentials.md
+
 # Dependency directories
 node_modules/
 jspm_packages/

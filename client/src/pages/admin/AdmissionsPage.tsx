@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
-import { Copy, Check, X } from "lucide-react";
+import { Copy, Check, X, UserPlus } from "lucide-react";
+import { toast } from "sonner";
+
+type ClassRow = { id: string; grade_level: string; section: string };
+const classLabel = (c?: { grade_level?: string; section?: string } | null) =>
+  c ? `${c.grade_level ?? ""}${c.section ? " - " + c.section : ""}`.trim() || "—" : "—";
 
 type AdmissionApplication = {
   id: string;
@@ -41,6 +46,9 @@ export function AdmissionsPage() {
   const [copied, setCopied] = useState(false);
   const [detailForm, setDetailForm] = useState({ status: "", interview_date: "", notes: "" });
   const [activeTab, setActiveTab] = useState<"applications" | "link">("applications");
+  const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [enrollClassId, setEnrollClassId] = useState("");
+  const [enrolling, setEnrolling] = useState(false);
 
   async function fetchApplications() {
     let query = supabase.from("admission_applications").select("*").eq("school_id", schoolId).order("applied_at", { ascending: false });
@@ -51,9 +59,73 @@ export function AdmissionsPage() {
 
   useEffect(() => { if (schoolId) fetchApplications(); }, [schoolId, statusFilter]);
 
+  useEffect(() => {
+    if (!schoolId) return;
+    supabase.from("classes").select("id, grade_level, section").eq("school_id", schoolId).order("grade_level")
+      .then(({ data }) => setClasses(data || []));
+  }, [schoolId]);
+
+  // Convert an admitted application into a real student (+ parent login if email exists).
+  async function handleAdmitEnroll() {
+    if (!selectedApp) return;
+    if (!enrollClassId) { toast.error("Please select a class & section to enroll into."); return; }
+    setEnrolling(true);
+    try {
+      const studentData = {
+        name: selectedApp.student_name,
+        date_of_birth: selectedApp.date_of_birth || null,
+        gender: selectedApp.gender || null,
+        father_name: selectedApp.father_name || null,
+        mother_name: selectedApp.mother_name || null,
+        phone: selectedApp.parent_phone || null,
+        address: selectedApp.address || null,
+        previous_school: selectedApp.previous_school || null,
+        academic_year: selectedApp.academic_year || null,
+        class_id: enrollClassId,
+      };
+
+      if (selectedApp.parent_email) {
+        // Full enrollment: creates parent auth account + student + sends WhatsApp credentials.
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-student`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            studentData,
+            parentName: selectedApp.father_name || selectedApp.mother_name || "Parent",
+            parentEmail: selectedApp.parent_email,
+            parentMobile: selectedApp.parent_phone,
+            schoolId,
+          }),
+        });
+        const result = await res.json();
+        if (result.error) throw new Error(result.error);
+      } else {
+        // No parent email — enroll the student record without a parent login.
+        const { error } = await supabase.from("students").insert({ ...studentData, school_id: schoolId });
+        if (error) throw error;
+      }
+
+      await supabase.from("admission_applications").update({ status: "admitted" }).eq("id", selectedApp.id);
+      toast.success(`${selectedApp.student_name} enrolled successfully!`);
+      setShowDetail(false);
+      setEnrollClassId("");
+      fetchApplications();
+    } catch (e: any) {
+      toast.error(e.message || "Enrollment failed");
+    } finally {
+      setEnrolling(false);
+    }
+  }
+
   function openDetail(app: AdmissionApplication) {
     setSelectedApp(app);
     setDetailForm({ status: app.status, interview_date: app.interview_date || "", notes: app.notes || "" });
+    setEnrollClassId("");
     setShowDetail(true);
   }
 
@@ -190,6 +262,28 @@ export function AdmissionsPage() {
               <div><label className="text-xs text-muted-foreground block mb-1">Interview Date</label><input type="date" title="Interview date" value={detailForm.interview_date} onChange={e => setDetailForm({ ...detailForm, interview_date: e.target.value })} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" /></div>
               <input value={detailForm.notes} onChange={e => setDetailForm({ ...detailForm, notes: e.target.value })} placeholder="Notes about this application" className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" />
             </div>
+
+            {/* Admit & Enroll — converts the application into a real student record */}
+            {selectedApp.status !== "admitted" && (
+              <div className="border-t border-border pt-4 mt-4">
+                <p className="text-sm font-semibold mb-1 flex items-center gap-1.5"><UserPlus className="w-4 h-4 text-emerald-600" /> Admit &amp; Enroll</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Creates the student record{selectedApp.parent_email ? " + a parent login (credentials sent via WhatsApp)" : " (no parent email — login can be added later)"}.
+                </p>
+                <div className="flex gap-2">
+                  <select title="Enroll into class" value={enrollClassId} onChange={e => setEnrollClassId(e.target.value)}
+                    className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-background">
+                    <option value="">Select class &amp; section…</option>
+                    {classes.map(c => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
+                  </select>
+                  <button type="button" onClick={handleAdmitEnroll} disabled={enrolling || !enrollClassId}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 whitespace-nowrap">
+                    {enrolling ? "Enrolling…" : "Admit & Enroll"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 mt-4">
               <button type="button" onClick={() => setShowDetail(false)} className="flex-1 py-2 border border-border rounded-lg text-sm">Close</button>
               <button type="button" onClick={handleSaveDetail} disabled={loading} className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50">{loading ? "Saving…" : "Save Changes"}</button>

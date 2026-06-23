@@ -4,7 +4,9 @@ import { useTenant } from "@/components/layout/DashboardLayout";
 import { Plus, Search, Printer, X, Save } from "lucide-react";
 
 type Exam = { id: string; name: string; exam_type: string; start_date: string; end_date: string; class_id?: string; is_published: boolean; class_name?: string };
-type ClassItem = { id: string; name: string };
+type ClassItem = { id: string; grade_level: string; section: string };
+const classLabel = (c?: { grade_level?: string; section?: string } | null) =>
+  c ? `${c.grade_level ?? ""}${c.section ? " - " + c.section : ""}`.trim() || "—" : "—";
 type Student = { id: string; name: string; roll_number?: string; class_id?: string };
 type Mark = { student_id: string; subject: string; max_marks: number; marks_obtained: number | null; is_absent: boolean };
 
@@ -64,10 +66,10 @@ export function ExamsPage() {
     const supabase = createClient();
     const [e, c, st] = await Promise.all([
       supabase.from("exams").select("*").eq("school_id", schoolId).order("start_date", { ascending: false }),
-      supabase.from("classes").select("id, name").eq("school_id", schoolId),
+      supabase.from("classes").select("id, grade_level, section").eq("school_id", schoolId),
       supabase.from("students").select("id, name, roll_number, class_id").eq("school_id", schoolId),
     ]);
-    const classMap = Object.fromEntries((c.data || []).map((x: ClassItem) => [x.id, x.name]));
+    const classMap = Object.fromEntries((c.data || []).map((x: ClassItem) => [x.id, classLabel(x)]));
     const enrichedExams = (e.data || []).map((x: Exam) => ({ ...x, class_name: x.class_id ? classMap[x.class_id] || "All Classes" : "All Classes" }));
     setExams(enrichedExams);
     setClasses(c.data || []);
@@ -236,7 +238,7 @@ export function ExamsPage() {
             </select>
             <select title="Select class" value={selClass} onChange={e => setSelClass(e.target.value)} className="border border-border rounded-lg px-3 py-2 text-sm bg-background">
               <option value="">Select Class</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {classes.map(c => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
             </select>
             <div className="flex items-center gap-2">
               <input value={newSubject} onChange={e => setNewSubject(e.target.value)} placeholder="Add subject" title="New subject name" className="border border-border rounded-lg px-3 py-2 text-sm bg-background w-40" />
@@ -356,7 +358,7 @@ export function ExamsPage() {
               <div className="flex items-center gap-3 mb-6">
                 <select title="Select class" value={bulkClass} onChange={e => setBulkClass(e.target.value)} className="border border-border rounded-lg px-3 py-2 text-sm bg-background">
                   <option value="">Select Class</option>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {classes.map(c => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
                 </select>
                 <select title="Select exam" value={bulkExam} onChange={e => setBulkExam(e.target.value)} className="border border-border rounded-lg px-3 py-2 text-sm bg-background">
                   <option value="">Select Exam</option>
@@ -414,7 +416,7 @@ export function ExamsPage() {
                 </select>
                 <select title="Class" value={addForm.class_id} onChange={e => setAddForm(p => ({ ...p, class_id: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background">
                   <option value="">All Classes</option>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {classes.map(c => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

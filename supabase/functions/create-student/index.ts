@@ -1,20 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, jsonError, verifyCaller } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
     const {
       studentData,       // student fields (name, class_id, etc.)
       parentName,
@@ -28,6 +18,20 @@ Deno.serve(async (req) => {
     if (!parentEmail || !schoolId) {
       throw new Error("parentEmail and schoolId are required");
     }
+
+    // ── Authorization ─────────────────────────────────────────────────────────
+    // Only a school_admin/staff of THIS school (or a super_admin) may enroll.
+    const caller = await verifyCaller(req);
+    if (!caller) return jsonError("Unauthorized", 401);
+    if (!caller.hasRoleInSchool(schoolId, ["school_admin", "staff"])) {
+      return jsonError("Forbidden: must be an admin or staff of this school", 403);
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
 
     // Auto-generate password: Parent@ + last 4 digits of mobile (or 1234 fallback)
     const mobileSuffix = parentMobile?.slice(-4) || "1234";

@@ -36,29 +36,32 @@ export function TeacherAttendanceReportPage() {
 
     const { data: students } = await supabase
       .from("students")
-      .select("user_id, enrollment_number, users:user_id(full_name)")
+      .select("id, enrollment_number, users:user_id(full_name)")
       .eq("class_id", selectedClass);
 
-    if (!students) { setLoading(false); return; }
+    if (!students || students.length === 0) { setReport([]); setLoading(false); return; }
 
-    const reportData = await Promise.all(students.map(async (s: any) => {
-      const { count: total } = await supabase.from("daily_attendance")
-        .select("*", { count: "exact", head: true })
-        .eq("student_id", s.user_id).gte("date", startDate).lte("date", endDate);
-      const { count: present } = await supabase.from("daily_attendance")
-        .select("*", { count: "exact", head: true })
-        .eq("student_id", s.user_id).eq("status", "present").gte("date", startDate).lte("date", endDate);
-      const pct = total ? Math.round(((present || 0) / total) * 100) : 0;
+    // ONE aggregation query in the DB instead of 2 queries per student (N+1).
+    const ids = students.map((s: any) => s.id);
+    const { data: summary } = await supabase.rpc("attendance_summary", {
+      p_student_ids: ids, p_start: startDate, p_end: endDate,
+    });
+    const sumMap: Record<string, { total: number; present: number }> = {};
+    (summary || []).forEach((row: any) => { sumMap[row.student_id] = { total: Number(row.total), present: Number(row.present) }; });
+
+    const reportData = students.map((s: any) => {
+      const agg = sumMap[s.id] || { total: 0, present: 0 };
+      const pct = agg.total ? Math.round((agg.present / agg.total) * 100) : 0;
       return {
-        id: s.user_id,
+        id: s.id,
         name: s.users?.full_name || "—",
         roll: s.enrollment_number,
-        total: total || 0,
-        present: present || 0,
-        absent: (total || 0) - (present || 0),
+        total: agg.total,
+        present: agg.present,
+        absent: agg.total - agg.present,
         pct,
       };
-    }));
+    });
 
     setReport(reportData.sort((a, b) => a.name.localeCompare(b.name)));
     setLoading(false);

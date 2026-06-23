@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,10 +37,15 @@ export function SubscriptionPage() {
 
     try {
       // 1. Create order on our backend (Supabase Edge Function)
+      const { data: { session } } = await createClient().auth.getSession();
       const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/razorpay`;
       const response = await fetch(`${functionUrl}/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({ amount, receiptNotes: { item: itemName, tenant } }),
       });
 

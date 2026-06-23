@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Users, GraduationCap, Banknote, CalendarDays, TrendingUp, Clock, Cake, AlertTriangle, MessageCircle, ShieldAlert, Bus, HeartPulse, Receipt, X, Printer, Trophy } from "lucide-react";
@@ -84,6 +84,12 @@ export function AdminDashboard() {
   const [topper, setTopper] = useState<TopperData | null>(null);
   const [announcingTopper, setAnnouncingTopper] = useState(false);
 
+  // Delight Feature 2: confetti flag
+  const confettiFiredRef = useRef(false);
+
+  // Delight Feature 3: admissions card pulse ref
+  const admissionsCardRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!schoolId) return;
     async function fetchStats() {
@@ -123,7 +129,7 @@ export function AdminDashboard() {
         supabase.from("daily_attendance").select("*", { count: "exact", head: true }).eq("school_id", schoolId).eq("date", today).eq("status", "present"),
         supabase.from("daily_attendance").select("*", { count: "exact", head: true }).eq("school_id", schoolId).eq("date", today).eq("status", "absent"),
         supabase.from("daily_attendance").select("*", { count: "exact", head: true }).eq("school_id", schoolId).eq("date", today),
-        supabase.from("student_fee_assignments").select("amount").eq("school_id", schoolId).eq("status", "pending"),
+        supabase.rpc("pending_fees_summary", { p_school: schoolId }),
         supabase.from("exams").select("title, exam_date, class_id").eq("school_id", schoolId).gte("exam_date", today).lte("exam_date", in7Days).order("exam_date").limit(5),
         supabase.from("admission_applications").select("student_name, applying_for_class, applied_at, status").eq("school_id", schoolId).order("applied_at", { ascending: false }).limit(5),
         supabase.from("students").select("name, admission_number, created_at").eq("school_id", schoolId).order("created_at", { ascending: false }).limit(5),
@@ -133,8 +139,8 @@ export function AdminDashboard() {
         supabase.from("user_roles").select("user_id, profiles(full_name, date_of_birth)").eq("school_id", schoolId).eq("role", "teacher"),
         // Today's fee payments
         supabase.from("fee_payments").select("amount").eq("school_id", schoolId).gte("created_at", `${today}T00:00:00`).lte("created_at", `${today}T23:59:59`),
-        // All attendance for below-75% calculation (last 30 days)
-        supabase.from("daily_attendance").select("student_id, status").eq("school_id", schoolId).gte("date", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]),
+        // Below-75% count computed in the DB (handles 1M+ attendance rows)
+        supabase.rpc("students_below_attendance", { p_school: schoolId, p_threshold: 0.75, p_days: 30 }),
         // Immediate exams (within 3 days)
         supabase.from("exams").select("title, exam_date").eq("school_id", schoolId).gte("exam_date", today).lte("exam_date", in3Days).order("exam_date").limit(1),
         // Feature 3: recent payments with student names
@@ -143,7 +149,8 @@ export function AdminDashboard() {
         supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
       ]);
 
-      const pendingTotal = (pendingFeesRes.data || []).reduce((sum, r) => sum + (r.amount || 0), 0);
+      const pendingTotal = Number(pendingFeesRes.data?.[0]?.total || 0);
+      const pendingFeesCnt = Number(pendingFeesRes.data?.[0]?.cnt || 0);
 
       setStats({
         totalStudents: studentsRes.count || 0,
@@ -153,7 +160,7 @@ export function AdminDashboard() {
         todayAbsent: attendanceAbsentRes.count || 0,
         todayTotal: attendanceTotalRes.count || 0,
         pendingFees: pendingTotal,
-        pendingFeesCount: (pendingFeesRes.data || []).length,
+        pendingFeesCount: pendingFeesCnt,
         upcomingExams: (upcomingExamsRes.data || []) as DashboardStats["upcomingExams"],
         recentAdmissions: (recentAdmissionsRes.data || []) as DashboardStats["recentAdmissions"],
         recentStudents: (recentStudentsRes.data || []) as DashboardStats["recentStudents"],
@@ -182,15 +189,8 @@ export function AdminDashboard() {
       const todayCollected = (todayFeeRes.data || []).reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
       setFeeCollection({ todayCollected });
 
-      // Below-75% attendance flag
-      const attendanceMap: Record<string, { present: number; total: number }> = {};
-      for (const rec of allAttendanceRes.data || []) {
-        if (!attendanceMap[rec.student_id]) attendanceMap[rec.student_id] = { present: 0, total: 0 };
-        attendanceMap[rec.student_id].total += 1;
-        if (rec.status === "present") attendanceMap[rec.student_id].present += 1;
-      }
-      const below75 = Object.values(attendanceMap).filter(v => v.total >= 5 && (v.present / v.total) < 0.75).length;
-      setAttendanceFlag({ below75Count: below75 });
+      // Below-75% attendance flag (computed server-side via RPC)
+      setAttendanceFlag({ below75Count: Number(allAttendanceRes.data || 0) });
 
       // Immediate exam alert
       const exams = immediateExamsRes.data || [];
@@ -216,6 +216,15 @@ export function AdminDashboard() {
 
       // School name
       if (schoolRes.data?.name) setSchoolName(schoolRes.data.name);
+
+      // Delight Feature 2: confetti when all fees are cleared
+      const pendingCount = pendingFeesCnt;
+      const totalStudentCount = studentsRes.count || 0;
+      if (pendingCount === 0 && totalStudentCount > 0 && !confettiFiredRef.current) {
+        confettiFiredRef.current = true;
+        launchConfetti();
+        toast.success("🎉 All fees cleared! Amazing!");
+      }
 
       setLoading(false);
     }
@@ -363,9 +372,59 @@ export function AdminDashboard() {
     fetchMediumStats();
   }, [schoolId]);
 
+  // Delight Feature 3: Realtime new admission ping
+  useEffect(() => {
+    if (!schoolId) return;
+    const channel = supabase
+      .channel(`admissions-realtime-${schoolId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "admission_applications",
+          filter: `school_id=eq.${schoolId}`,
+        },
+        (payload) => {
+          const name = (payload.new as any)?.student_name || "a student";
+          toast.info(`🔔 New admission application from ${name}!`);
+          // Flash the admissions card
+          const card = admissionsCardRef.current;
+          if (card) {
+            card.classList.add("animate-pulse");
+            setTimeout(() => card.classList.remove("animate-pulse"), 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [schoolId]);
+
   const attendancePct = stats.todayTotal > 0 ? Math.round((stats.todayPresent / stats.todayTotal) * 100) : null;
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const todayIso = new Date().toISOString().split("T")[0];
+
+  // Delight Feature 1: time-based greeting
+  const currentHour = new Date().getHours();
+  const greetingWord =
+    currentHour >= 5 && currentHour < 12
+      ? "Good Morning"
+      : currentHour >= 12 && currentHour < 17
+      ? "Good Afternoon"
+      : currentHour >= 17 && currentHour < 21
+      ? "Good Evening"
+      : "Welcome";
+  const greetingEmoji =
+    currentHour >= 5 && currentHour < 12
+      ? "🌤️"
+      : currentHour >= 12 && currentHour < 17
+      ? "☀️"
+      : currentHour >= 17 && currentHour < 21
+      ? "🌆"
+      : "🌙";
 
   async function handleSendWhatsApp() {
     setSendingWhatsApp(true);
@@ -427,9 +486,37 @@ export function AdminDashboard() {
 
   return (
     <div>
+      {/* Confetti CSS keyframes — injected once, no inline styles in JSX */}
+      <style>{`
+        @keyframes confetti-fall {
+          0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+          100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .confetti-piece {
+          position: fixed;
+          width: 8px;
+          height: 8px;
+          border-radius: 2px;
+          pointer-events: none;
+          z-index: 9999;
+          animation: confetti-fall 3s ease-in forwards;
+        }
+      `}</style>
+
       <div className="page-header">
-        <h1>Dashboard</h1>
-        <p className="text-muted-foreground text-sm">{today}</p>
+        <div>
+          {schoolName ? (
+            <h1 className="text-2xl font-bold">
+              <span className="bg-gradient-to-r from-fuchsia-400 to-orange-400 bg-clip-text text-transparent">
+                {greetingWord}, {schoolName}!
+              </span>
+              {" "}{greetingEmoji}
+            </h1>
+          ) : (
+            <h1>Dashboard</h1>
+          )}
+          <p className="text-muted-foreground text-sm mt-0.5">{today}</p>
+        </div>
       </div>
 
       {loading ? (
@@ -628,7 +715,7 @@ export function AdminDashboard() {
             </div>
 
             {/* Recent Admissions */}
-            <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+            <div ref={admissionsCardRef} className="bg-card rounded-xl border border-border p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-sm">Recent Applications</h2>
                 <Users className="w-4 h-4 text-muted-foreground" />
@@ -914,6 +1001,28 @@ export function AdminDashboard() {
       )}
     </div>
   );
+}
+
+function launchConfetti() {
+  const colors = ["#e879f9", "#fb923c", "#a855f7", "#f59e0b", "#f472b6", "#fbbf24"];
+  const pieces: HTMLDivElement[] = [];
+
+  for (let i = 0; i < 50; i++) {
+    const el = document.createElement("div");
+    el.className = "confetti-piece";
+    // Use DOM properties instead of inline style attributes in JSX
+    el.style.left = `${Math.random() * 100}vw`;
+    el.style.top = "-20px";
+    el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDelay = `${Math.random() * 1.5}s`;
+    el.style.animationDuration = `${2 + Math.random() * 1.5}s`;
+    document.body.appendChild(el);
+    pieces.push(el);
+  }
+
+  setTimeout(() => {
+    pieces.forEach((el) => el.remove());
+  }, 3500);
 }
 
 function FeeProgressBar({ collected, pending }: { collected: number; pending: number }) {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.1";
+import { verifyCaller } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,15 @@ serve(async (req) => {
 
     // ─── Route: Create Order ──────────────────────────────────────────────────
     if (path.endsWith("/create") || body.action === "create-order") {
+      // Order creation must come from an authenticated user — prevents anonymous
+      // callers from creating spurious Razorpay orders / pending payment records.
+      const caller = await verifyCaller(req);
+      if (!caller) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { amount, receiptNotes } = body;
       if (!amount) throw new Error("Amount is required");
 
@@ -97,7 +107,7 @@ serve(async (req) => {
     if (path.endsWith("/verify") || body.action === "verify-payment") {
       const {
         razorpay_order_id, razorpay_payment_id, razorpay_signature,
-        invoiceId, item, tenant, amount
+        invoiceId, feeAssignmentId, item, tenant, amount
       } = body;
 
       if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -128,8 +138,37 @@ serve(async (req) => {
       }
 
       // ── Payment is valid — update records ────────────────────────────────
-      if (invoiceId) {
-        // School Fee Payment (student fees)
+      if (feeAssignmentId) {
+        // Student fee paid online → mark the assignment paid AND log a receipt,
+        // so it clears in the admin defaulter/pending views (which read
+        // student_fee_assignments + fee_receipts, not fee_payments).
+        const { data: assign, error: aErr } = await supabase
+          .from("student_fee_assignments")
+          .select("school_id, student_id, amount, discount, fine")
+          .eq("id", feeAssignmentId)
+          .maybeSingle();
+        if (aErr) throw aErr;
+        if (!assign) throw new Error("Fee assignment not found");
+
+        const { error: uErr } = await supabase
+          .from("student_fee_assignments")
+          .update({ status: "paid" })
+          .eq("id", feeAssignmentId);
+        if (uErr) throw uErr;
+
+        const netAmount = Math.max(0, Number(assign.amount || 0) - Number(assign.discount || 0) + Number(assign.fine || 0));
+        await supabase.from("fee_receipts").insert({
+          school_id:   assign.school_id,
+          student_id:  assign.student_id,
+          assignment_id: feeAssignmentId,
+          amount_paid: netAmount,
+          payment_mode: "online",
+          remarks:     `Razorpay ${razorpay_payment_id}`,
+          receipt_number: "",
+        });
+
+      } else if (invoiceId) {
+        // School Fee Payment (legacy fee_payments table)
         const { error } = await supabase
           .from("fee_payments")
           .update({ status: "paid", payment_date: new Date().toISOString() })

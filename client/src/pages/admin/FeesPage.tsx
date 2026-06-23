@@ -2,15 +2,36 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Plus, Search, Printer, X, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
 type FeeStructure = { id: string; name: string; description?: string; amount: number; frequency: string; late_fine_per_day: number; is_active: boolean; academic_year?: string };
 type Assignment = { id: string; student_id: string; fee_structure_id: string; due_date: string; amount: number; discount: number; fine: number; status: string; student_name?: string; fee_name?: string; late_fine_per_day?: number };
 type FeeReceipt = { id: string; receipt_number: string; student_id: string; assignment_id?: string; amount_paid: number; payment_mode: string; remarks?: string; paid_at: string; student_name?: string };
-type Student = { id: string; name: string; roll_number?: string; father_name?: string; phone?: string };
+type Student = { id: string; name: string; roll_number?: string; father_name?: string; phone?: string; class_id?: string };
 type School = { name: string; address?: string; phone?: string };
+type ClassRow = { id: string; grade_level: string; section: string };
+const classLabel = (c?: { grade_level?: string; section?: string } | null) =>
+  c ? `${c.grade_level ?? ""}${c.section ? " - " + c.section : ""}`.trim() || "—" : "—";
 
 const FREQ_COLORS: Record<string, string> = { monthly: "badge-blue", quarterly: "badge-purple", annual: "badge-green", one_time: "badge-gray" };
 const MODE_COLORS: Record<string, string> = { cash: "badge-gray", online: "badge-blue", upi: "badge-green", cheque: "badge-yellow", dd: "badge-purple" };
+
+// Fetch every row of a query in 1000-row chunks — defeats supabase-js's default
+// 1000-row cap so financial lists/totals are never silently truncated at scale.
+async function fetchAllChunked<T>(build: (from: number, to: number) => any): Promise<T[]> {
+  const CHUNK = 1000;
+  let from = 0;
+  const out: T[] = [];
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data } = await build(from, from + CHUNK - 1);
+    const batch = (data as T[]) || [];
+    out.push(...batch);
+    if (batch.length < CHUNK) break;
+    from += CHUNK;
+  }
+  return out;
+}
 
 export function FeesPage() {
   const { tenantId: schoolId, subdomain } = useTenant();
@@ -19,7 +40,10 @@ export function FeesPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [receipts, setReceipts] = useState<FeeReceipt[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<ClassRow[]>([]);
   const [school, setSchool] = useState<School | null>(null);
+  const [assignMode, setAssignMode] = useState<"single" | "bulk">("single");
+  const [bulkClassId, setBulkClassId] = useState("all");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -38,21 +62,27 @@ export function FeesPage() {
   async function fetchAll() {
     setLoading(true);
     const supabase = createClient();
-    const [s, a, r, st, sc] = await Promise.all([
+    const [s, sc, cl, a, r, st] = await Promise.all([
       supabase.from("fee_structures").select("*").eq("school_id", schoolId).order("created_at", { ascending: false }),
-      supabase.from("student_fee_assignments").select("*").eq("school_id", schoolId).order("due_date", { ascending: true }),
-      supabase.from("fee_receipts").select("*").eq("school_id", schoolId).order("paid_at", { ascending: false }),
-      supabase.from("students").select("id, name, roll_number, father_name, phone").eq("school_id", schoolId),
       supabase.from("schools").select("name, address, phone").eq("id", schoolId).single(),
+      supabase.from("classes").select("id, grade_level, section").eq("school_id", schoolId).order("grade_level"),
+      // Chunked so all dues/receipts/students load — never capped at 1000.
+      fetchAllChunked<Assignment>((from, to) =>
+        supabase.from("student_fee_assignments").select("*").eq("school_id", schoolId).order("due_date", { ascending: true }).range(from, to)),
+      fetchAllChunked<FeeReceipt>((from, to) =>
+        supabase.from("fee_receipts").select("*").eq("school_id", schoolId).order("paid_at", { ascending: false }).range(from, to)),
+      fetchAllChunked<Student>((from, to) =>
+        supabase.from("students").select("id, name, roll_number, father_name, phone, class_id").eq("school_id", schoolId).range(from, to)),
     ]);
-    const stuMap = Object.fromEntries((st.data || []).map((x: Student) => [x.id, x]));
+    setClasses(cl.data || []);
+    const stuMap = Object.fromEntries(st.map((x) => [x.id, x]));
     const feeMap = Object.fromEntries((s.data || []).map((x: FeeStructure) => [x.id, x]));
-    const enrichedA = (a.data || []).map((x: Assignment) => ({ ...x, student_name: stuMap[x.student_id]?.name || "Unknown", fee_name: feeMap[x.fee_structure_id]?.name || "—", late_fine_per_day: feeMap[x.fee_structure_id]?.late_fine_per_day || 0 }));
-    const enrichedR = (r.data || []).map((x: FeeReceipt) => ({ ...x, student_name: stuMap[x.student_id]?.name || "Unknown" }));
+    const enrichedA = a.map((x) => ({ ...x, student_name: stuMap[x.student_id]?.name || "Unknown", fee_name: feeMap[x.fee_structure_id]?.name || "—", late_fine_per_day: feeMap[x.fee_structure_id]?.late_fine_per_day || 0 }));
+    const enrichedR = r.map((x) => ({ ...x, student_name: stuMap[x.student_id]?.name || "Unknown" }));
     setStructures(s.data || []);
     setAssignments(enrichedA);
     setReceipts(enrichedR);
-    setStudents(st.data || []);
+    setStudents(st);
     if (sc.data) setSchool(sc.data as School);
     setLoading(false);
   }
@@ -67,10 +97,38 @@ export function FeesPage() {
   }
 
   async function saveAssign(e: React.FormEvent) {
-    e.preventDefault(); setSaving(true);
+    e.preventDefault();
+    if (assignMode === "bulk") { await bulkAssign(); return; }
+    setSaving(true);
     const supabase = createClient();
     await supabase.from("student_fee_assignments").insert({ school_id: schoolId, student_id: assignForm.student_id, fee_structure_id: assignForm.fee_structure_id, due_date: assignForm.due_date, amount: Number(assignForm.amount), discount: Number(assignForm.discount), fine: 0, status: "pending" });
     setSaving(false); setShowAssign(false); fetchAll();
+  }
+
+  // Assign one fee structure to an entire class (or all students) in a single insert.
+  async function bulkAssign() {
+    if (!assignForm.fee_structure_id || !assignForm.due_date) { return; }
+    setSaving(true);
+    const supabase = createClient();
+    const targets = bulkClassId === "all" ? students : students.filter(s => s.class_id === bulkClassId);
+    // Skip students who already have this fee assigned (avoid duplicates).
+    const existing = new Set(assignments.map(a => `${a.student_id}:${a.fee_structure_id}`));
+    const rows = targets
+      .filter(s => !existing.has(`${s.id}:${assignForm.fee_structure_id}`))
+      .map(s => ({
+        school_id: schoolId, student_id: s.id, fee_structure_id: assignForm.fee_structure_id,
+        due_date: assignForm.due_date, amount: Number(assignForm.amount), discount: Number(assignForm.discount || 0),
+        fine: 0, status: "pending",
+      }));
+    if (rows.length === 0) { setSaving(false); toast.error("No new students to assign (all already have this fee)."); return; }
+    // Insert in chunks of 500 to stay within request limits.
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await supabase.from("student_fee_assignments").insert(rows.slice(i, i + 500));
+      if (error) { setSaving(false); toast.error(error.message); return; }
+    }
+    setSaving(false); setShowAssign(false);
+    toast.success(`Fee assigned to ${rows.length} student(s).`);
+    fetchAll();
   }
 
   async function collectPayment(e: React.FormEvent) {
@@ -470,14 +528,38 @@ export function FeesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-lg">Assign Fee to Student</h2>
+              <h2 className="font-bold text-lg">Assign Fee</h2>
               <button type="button" title="Close" onClick={() => setShowAssign(false)}><X className="w-5 h-5" /></button>
             </div>
+            {/* Single vs Bulk mode */}
+            <div className="flex gap-1 bg-muted/50 rounded-lg p-1 mb-3 w-full">
+              {(["single", "bulk"] as const).map(m => (
+                <button key={m} type="button" onClick={() => setAssignMode(m)}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-all ${assignMode === m ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                  {m === "single" ? "Single Student" : "Bulk (by Class)"}
+                </button>
+              ))}
+            </div>
             <form onSubmit={saveAssign} className="space-y-3">
-              <select required title="Select student" value={assignForm.student_id} onChange={e => setAssignForm(p => ({ ...p, student_id: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background">
-                <option value="">Select Student</option>
-                {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              {assignMode === "single" ? (
+                <select required title="Select student" value={assignForm.student_id} onChange={e => setAssignForm(p => ({ ...p, student_id: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background">
+                  <option value="">Select Student</option>
+                  {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              ) : (
+                <div>
+                  <select title="Select class" value={bulkClassId} onChange={e => setBulkClassId(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background">
+                    <option value="all">All Students ({students.length})</option>
+                    {classes.map(c => {
+                      const n = students.filter(s => s.class_id === c.id).length;
+                      return <option key={c.id} value={c.id}>{classLabel(c)} ({n})</option>;
+                    })}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Will assign to {(bulkClassId === "all" ? students.length : students.filter(s => s.class_id === bulkClassId).length)} student(s) · already-assigned are skipped.
+                  </p>
+                </div>
+              )}
               <select required title="Select fee structure" value={assignForm.fee_structure_id} onChange={e => { const fs = structures.find(s => s.id === e.target.value); setAssignForm(p => ({ ...p, fee_structure_id: e.target.value, amount: fs ? String(fs.amount) : p.amount })); }} className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background">
                 <option value="">Select Fee Structure</option>
                 {structures.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} — ₹{Number(s.amount).toLocaleString("en-IN")}</option>)}

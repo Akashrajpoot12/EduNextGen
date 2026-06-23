@@ -20,7 +20,7 @@ SET school_id = ur.school_id,
 FROM (
   SELECT DISTINCT ON (user_id) user_id, school_id, role
   FROM public.user_roles
-  ORDER BY user_id, created_at DESC
+  ORDER BY user_id, role
 ) ur
 WHERE u.id = ur.user_id AND u.school_id IS NULL;
 
