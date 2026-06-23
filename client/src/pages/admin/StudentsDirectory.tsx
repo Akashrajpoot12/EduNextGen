@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
-import { Plus, Search, Pencil, X, Users, CheckCircle2, Copy, Eye, CreditCard, Download } from "lucide-react";
+import { Plus, Search, Pencil, X, Users, CheckCircle2, Copy, Eye, CreditCard, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
+import Papa from "papaparse";
 
 type Student = {
   id: string;
@@ -21,10 +22,14 @@ type Student = {
   previous_school: string;
   academic_year: string;
   class_id: string;
-  classes?: { name: string } | null;
+  classes?: { grade_level: string; section: string } | null;
 };
 
-type Class = { id: string; name: string };
+type Class = { id: string; grade_level: string; section: string };
+
+const PAGE_SIZE = 50;
+const classLabel = (c?: { grade_level?: string; section?: string } | null) =>
+  c ? `${c.grade_level ?? ""}${c.section ? " - " + c.section : ""}`.trim() || "—" : "—";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 const CATEGORIES = ["General", "OBC", "SC", "ST", "EWS"];
@@ -57,6 +62,9 @@ export function StudentsDirectory() {
   const navigate = useNavigate();
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [stats, setStats] = useState<{ total: number; Male: number; Female: number; Other: number }>({ total: 0, Male: 0, Female: 0, Other: 0 });
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -76,23 +84,51 @@ export function StudentsDirectory() {
   // Attendance CSV export state
   const [exportingCsv, setExportingCsv] = useState(false);
 
-  async function fetchData() {
-    setLoading(true);
-    const [studsRes, classRes, feesRes, schoolRes] = await Promise.all([
-      supabase
-        .from("students")
-        .select("id, name, roll_number, admission_number, father_name, mother_name, phone, address, blood_group, category, date_of_birth, gender, previous_school, academic_year, class_id, classes(name)")
-        .eq("school_id", schoolId)
-        .order("name"),
-      supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
+  // Bulk CSV import state
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+  const [importing, setImporting] = useState(false);
+
+  const STUDENT_COLS =
+    "id, name, roll_number, admission_number, father_name, mother_name, phone, address, blood_group, category, date_of_birth, gender, previous_school, academic_year, class_id, classes(grade_level, section)";
+
+  // Reference data (classes, fee structures, school) — loaded once.
+  async function fetchMeta() {
+    const [classRes, feesRes, schoolRes] = await Promise.all([
+      supabase.from("classes").select("id, grade_level, section").eq("school_id", schoolId).order("grade_level"),
       supabase.from("fee_structures").select("id, name, amount, frequency").eq("school_id", schoolId).eq("is_active", true).order("name"),
       supabase.from("schools").select("name, subdomain").eq("id", schoolId).maybeSingle(),
     ]);
-    setStudents(studsRes.data || []);
     setClasses(classRes.data || []);
     setFeeStructures(feesRes.data || []);
     if (schoolRes.data) setSchool(schoolRes.data);
+  }
+
+  // School-wide stat counts (not affected by search/page).
+  async function fetchStats() {
+    const base = () => supabase.from("students").select("*", { count: "exact", head: true }).eq("school_id", schoolId);
+    const [t, m, f, o] = await Promise.all([base(), base().eq("gender", "Male"), base().eq("gender", "Female"), base().eq("gender", "Other")]);
+    setStats({ total: t.count || 0, Male: m.count || 0, Female: f.count || 0, Other: o.count || 0 });
+  }
+
+  // One page of students, filtered + searched server-side.
+  async function fetchStudents(p = page) {
+    setLoading(true);
+    let q = supabase.from("students").select(STUDENT_COLS, { count: "exact" }).eq("school_id", schoolId);
+    const term = search.trim().replace(/[%,()]/g, " ");
+    if (term) q = q.or(`name.ilike.%${term}%,roll_number.ilike.%${term}%,admission_number.ilike.%${term}%`);
+    if (classFilter !== "all") q = q.eq("class_id", classFilter);
+    const from = p * PAGE_SIZE;
+    const { data, count } = await q.order("name").range(from, from + PAGE_SIZE - 1);
+    setStudents((data as unknown as Student[]) || []);
+    setTotalCount(count || 0);
+    setPage(p);
     setLoading(false);
+  }
+
+  // Refresh after a mutation (add/edit/delete): reload current page + counts.
+  async function fetchData() {
+    await Promise.all([fetchStudents(page), fetchStats()]);
   }
 
   async function autoFillRollNumber(classId: string) {
@@ -106,7 +142,15 @@ export function StudentsDirectory() {
     setForm((prev) => ({ ...prev, roll_number: nextRoll }));
   }
 
-  useEffect(() => { if (schoolId) fetchData(); }, [schoolId]);
+  useEffect(() => { if (schoolId) { fetchMeta(); fetchStudents(0); fetchStats(); } }, [schoolId]);
+
+  // Debounced server-side search / class filter — resets to first page.
+  useEffect(() => {
+    if (!schoolId) return;
+    const t = setTimeout(() => fetchStudents(0), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, classFilter]);
 
   function openAdd() {
     setEditStudent(null);
@@ -259,13 +303,92 @@ export function StudentsDirectory() {
     setSelectedFeeIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
 
-  const filtered = students.filter((s) => {
-    const matchSearch = !search || s.name?.toLowerCase().includes(search.toLowerCase()) || s.roll_number?.includes(search) || s.admission_number?.includes(search);
-    const matchClass = classFilter === "all" || s.class_id === classFilter;
-    return matchSearch && matchClass;
-  });
+  // Server already filtered + paginated; render the current page directly.
+  const filtered = students;
 
-  // --- Feature 2: Export Attendance CSV ---
+  // Fetch every row of a query in 1000-row chunks (beats the default cap).
+  async function fetchAllChunked<T>(build: (from: number, to: number) => any): Promise<T[]> {
+    const CHUNK = 1000;
+    let from = 0;
+    const out: T[] = [];
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { data } = await build(from, from + CHUNK - 1);
+      const batch = (data as T[]) || [];
+      out.push(...batch);
+      if (batch.length < CHUNK) break;
+      from += CHUNK;
+    }
+    return out;
+  }
+
+  // --- Bulk CSV import ---
+  const normKey = (x: string) => x.toLowerCase().replace(/\s+/g, "").replace(/[-_]/g, "");
+  function resolveClassId(raw: string): string | null {
+    if (!raw) return null;
+    const target = normKey(raw);
+    for (const c of classes) {
+      if (normKey(`${c.grade_level}${c.section}`) === target) return c.id;
+    }
+    const byGrade = classes.filter((c) => normKey(c.grade_level) === target);
+    return byGrade.length === 1 ? byGrade[0].id : null;
+  }
+
+  function handleCsvFile(file: File) {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
+      complete: (res) => {
+        setImportRows((res.data as Record<string, string>[]).filter((r) => Object.values(r).some((v) => v)));
+        setShowImport(true);
+      },
+      error: () => toast.error("Could not read CSV file."),
+    });
+  }
+
+  function downloadCsvTemplate() {
+    const sample = "name,class,roll_number,gender,date_of_birth,father_name,mother_name,phone\nAarav Sharma,Class 1 - A,1,Male,2018-05-10,Rajesh Sharma,Sunita Sharma,9876543210\n";
+    const url = URL.createObjectURL(new Blob([sample], { type: "text/csv" }));
+    const a = document.createElement("a"); a.href = url; a.download = "students-template.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function runImport() {
+    setImporting(true);
+    try {
+      const toInsert: Record<string, unknown>[] = [];
+      let skipped = 0;
+      for (const r of importRows) {
+        const name = r.name || r.student_name;
+        const classId = resolveClassId(r.class || r.class_name || r.grade || "");
+        if (!name || !classId) { skipped++; continue; }
+        toInsert.push({
+          school_id: schoolId, name, class_id: classId,
+          roll_number: r.roll_number || r.roll || null,
+          gender: r.gender || null,
+          date_of_birth: r.date_of_birth || r.dob || null,
+          father_name: r.father_name || null,
+          mother_name: r.mother_name || null,
+          phone: r.phone || r.parent_phone || null,
+        });
+      }
+      if (toInsert.length === 0) { toast.error("No valid rows (check the 'class' column matches an existing class)."); setImporting(false); return; }
+      let ok = 0;
+      for (let i = 0; i < toInsert.length; i += 500) {
+        const { error } = await supabase.from("students").insert(toInsert.slice(i, i + 500));
+        if (error) { toast.error(error.message); setImporting(false); return; }
+        ok += toInsert.slice(i, i + 500).length;
+      }
+      toast.success(`Imported ${ok} student(s)${skipped ? `, skipped ${skipped} (missing name/unmatched class)` : ""}.`);
+      setShowImport(false); setImportRows([]);
+      fetchStudents(0); fetchStats();
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  // --- Feature 2: Export Attendance CSV (all students, all month rows) ---
   async function handleExportAttendanceCsv() {
     setExportingCsv(true);
     try {
@@ -273,27 +396,29 @@ export function StudentsDirectory() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
-      const { data: attendanceRows } = await supabase
-        .from("daily_attendance")
-        .select("student_id, status")
-        .eq("school_id", schoolId)
-        .gte("date", monthStart)
-        .lte("date", monthEnd);
+      const attendanceRows = await fetchAllChunked<{ student_id: string; status: string }>((from, to) =>
+        supabase.from("daily_attendance").select("student_id, status")
+          .eq("school_id", schoolId).gte("date", monthStart).lte("date", monthEnd).range(from, to)
+      );
+
+      const allStudents = await fetchAllChunked<Student>((from, to) =>
+        supabase.from("students").select(STUDENT_COLS).eq("school_id", schoolId).order("name").range(from, to)
+      );
 
       // Build a map: student_id -> { present, absent }
       const attMap: Record<string, { present: number; absent: number }> = {};
-      for (const row of attendanceRows || []) {
+      for (const row of attendanceRows) {
         if (!attMap[row.student_id]) attMap[row.student_id] = { present: 0, absent: 0 };
         if (row.status === "present") attMap[row.student_id].present += 1;
         else attMap[row.student_id].absent += 1;
       }
 
       const headers = ["Student Name", "Roll No", "Class", "Present Days", "Absent Days", "Attendance %"];
-      const rows = students.map((s) => {
+      const rows = allStudents.map((s) => {
         const rec = attMap[s.id] || { present: 0, absent: 0 };
         const total = rec.present + rec.absent;
         const pct = total > 0 ? Math.round((rec.present / total) * 100) : 0;
-        const cls = (s.classes as { name: string } | null)?.name || "";
+        const cls = classLabel(s.classes);
         return [s.name, s.roll_number || "", cls, rec.present, rec.absent, `${pct}%`];
       });
 
@@ -331,6 +456,11 @@ export function StudentsDirectory() {
             <Download className="w-4 h-4" />
             {exportingCsv ? "Exporting…" : "Export Attendance CSV"}
           </button>
+          <label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted/50 cursor-pointer">
+            <Upload className="w-4 h-4" /> Import CSV
+            <input type="file" accept=".csv" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsvFile(f); e.target.value = ""; }} />
+          </label>
           <button
             type="button"
             onClick={openAdd}
@@ -348,10 +478,10 @@ export function StudentsDirectory() {
             <Users className="w-4 h-4 text-blue-500" />
             <p className="text-xs text-muted-foreground">Total Students</p>
           </div>
-          <p className="text-2xl font-bold">{students.length.toLocaleString("en-IN")}</p>
+          <p className="text-2xl font-bold">{stats.total.toLocaleString("en-IN")}</p>
         </div>
-        {["Male", "Female", "Other"].slice(0, 3).map((g) => {
-          const cnt = students.filter((s) => s.gender === g).length;
+        {(["Male", "Female", "Other"] as const).map((g) => {
+          const cnt = stats[g];
           const accent = g === "Male" ? "card-accent-blue" : g === "Female" ? "card-accent-pink" : "card-accent-gray";
           return (
             <div key={g} className={`bg-card rounded-xl p-4 border border-border shadow-sm ${accent}`}>
@@ -380,9 +510,9 @@ export function StudentsDirectory() {
           className="border border-border rounded-lg px-3 py-2 text-sm bg-background"
         >
           <option value="all">All Classes</option>
-          {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {classes.map((c) => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
         </select>
-        <span className="text-sm text-muted-foreground ml-auto">{filtered.length} students</span>
+        <span className="text-sm text-muted-foreground ml-auto">{totalCount.toLocaleString("en-IN")} students</span>
       </div>
 
       {/* Table */}
@@ -410,7 +540,7 @@ export function StudentsDirectory() {
               <tr><td colSpan={10} className="text-center text-muted-foreground py-10">No students found. Enroll your first student.</td></tr>
             )}
             {filtered.map((s) => {
-              const cls = (s.classes as { name: string } | null)?.name || "—";
+              const cls = classLabel(s.classes);
               return (
                 <tr key={s.id}>
                   <td className="font-medium">{s.name}</td>
@@ -449,6 +579,60 @@ export function StudentsDirectory() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-sm text-muted-foreground">
+            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount.toLocaleString("en-IN")}
+          </span>
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={page === 0 || loading} onClick={() => fetchStudents(page - 1)}
+              className="px-3 py-1.5 border border-border rounded-lg text-sm disabled:opacity-40 hover:bg-muted/50">Prev</button>
+            <span className="text-sm">Page {page + 1} / {Math.max(1, Math.ceil(totalCount / PAGE_SIZE))}</span>
+            <button type="button" disabled={(page + 1) * PAGE_SIZE >= totalCount || loading} onClick={() => fetchStudents(page + 1)}
+              className="px-3 py-1.5 border border-border rounded-lg text-sm disabled:opacity-40 hover:bg-muted/50">Next</button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk CSV Import Modal */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-lg">Import Students — {importRows.length} rows</h2>
+              <button type="button" title="Close" onClick={() => { setShowImport(false); setImportRows([]); }}><X className="w-5 h-5" /></button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Required columns: <code>name</code>, <code>class</code> (e.g. "Class 1 - A" or "Class 1"). Optional: roll_number, gender, date_of_birth, father_name, mother_name, phone.
+              <button type="button" onClick={downloadCsvTemplate} className="ml-1 text-primary underline">Download template</button>
+            </p>
+            <div className="border border-border rounded-lg overflow-auto max-h-64 mb-4">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/50 sticky top-0"><tr><th className="text-left p-2">Name</th><th className="text-left p-2">Class</th><th className="text-left p-2">Match</th></tr></thead>
+                <tbody>
+                  {importRows.slice(0, 50).map((r, i) => {
+                    const matched = !!resolveClassId(r.class || r.class_name || r.grade || "");
+                    return (
+                      <tr key={i} className="border-t border-border">
+                        <td className="p-2">{r.name || r.student_name || <span className="text-red-500">missing</span>}</td>
+                        <td className="p-2">{r.class || r.class_name || r.grade || "—"}</td>
+                        <td className="p-2">{matched ? <span className="text-emerald-600">✓</span> : <span className="text-red-500">no class</span>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {importRows.length > 50 && <p className="text-xs text-muted-foreground mb-3">Showing first 50 of {importRows.length} rows.</p>}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setShowImport(false); setImportRows([]); }} className="flex-1 py-2 border border-border rounded-lg text-sm">Cancel</button>
+              <button type="button" onClick={runImport} disabled={importing} className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50">{importing ? "Importing…" : `Import ${importRows.length} Students`}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feature 1: ID Card Modal */}
       {idCardStudent && (
