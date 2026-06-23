@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Save, ChevronLeft, ChevronRight, CheckCircle, Users } from "lucide-react";
 
-type Class = { id: string; name: string };
+type Class = { id: string; grade_level: string; section: string };
+const classLabel = (c?: { grade_level?: string; section?: string } | null) =>
+  c ? `${c.grade_level ?? ""}${c.section ? " - " + c.section : ""}`.trim() || "—" : "—";
 type Student = { id: string; name: string; roll_number: string };
 type AttendanceStatus = "present" | "absent" | "late" | "half_day";
 
@@ -40,7 +42,7 @@ export function AttendancePage() {
 
   useEffect(() => {
     if (!schoolId) return;
-    supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name")
+    supabase.from("classes").select("id, grade_level, section").eq("school_id", schoolId).order("grade_level")
       .then(({ data }) => setClasses(data || []));
   }, [schoolId]);
 
@@ -70,7 +72,7 @@ export function AttendancePage() {
     setDashLoading(true);
     async function loadDashboard() {
       const [classRes, attRes, studRes] = await Promise.all([
-        supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
+        supabase.from("classes").select("id, grade_level, section").eq("school_id", schoolId).order("grade_level"),
         supabase.from("daily_attendance").select("student_id, status, students(class_id)").eq("school_id", schoolId).eq("date", date),
         supabase.from("students").select("id, class_id").eq("school_id", schoolId),
       ]);
@@ -218,7 +220,7 @@ export function AttendancePage() {
                       const pctColor = pct === null ? "" : pct >= 90 ? "text-emerald-600" : pct >= 75 ? "text-amber-600" : "text-red-500";
                       return (
                         <tr key={row.classObj.id}>
-                          <td className="font-medium">{row.classObj.name}</td>
+                          <td className="font-medium">{classLabel(row.classObj)}</td>
                           <td>{row.total}</td>
                           <td className="text-emerald-600 font-semibold">{row.present}</td>
                           <td className="text-red-500 font-semibold">{row.absent}</td>
@@ -255,7 +257,7 @@ export function AttendancePage() {
             <select title="Select class" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}
               className="border border-border rounded-lg px-3 py-2 text-sm bg-background">
               <option value="">Select class…</option>
-              {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {classes.map((c) => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
             </select>
             {students.length > 0 && (
               <>

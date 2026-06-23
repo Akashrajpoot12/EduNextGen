@@ -8,6 +8,7 @@ import { Loader2, CheckCircle2, XCircle, Save, CheckSquare, XSquare, Phone, Aler
 import { toast } from "sonner";
 
 interface Student {
+  id: string;
   user_id: string;
   enrollment_number: string;
   roll_number: string | null;
@@ -18,6 +19,49 @@ interface Student {
 }
 
 const TOP_BADGES = ["⭐", "🥈", "🥉"];
+
+// Returns true if date string (YYYY-MM-DD) is a weekday (Mon-Fri)
+function isSchoolDay(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  return day >= 1 && day <= 5;
+}
+
+// Get all school days (Mon-Fri) in the current month up to today
+function getSchoolDaysThisMonth(): string[] {
+  const now = new Date();
+  const days: string[] = [];
+  for (let d = 1; d <= now.getDate(); d++) {
+    const dt = new Date(now.getFullYear(), now.getMonth(), d);
+    if (dt.getDay() >= 1 && dt.getDay() <= 5) {
+      days.push(dt.toISOString().split("T")[0]);
+    }
+  }
+  return days;
+}
+
+interface MoodInfo {
+  score: number;
+  emoji: string;
+  label: string;
+  colorClass: string;
+  badgeClass: string;
+}
+
+function computeMoodBadge(presentPct: number, streak: number): MoodInfo {
+  const rawScore = presentPct * (streak / 10);
+  const score = Math.min(100, Math.round(rawScore));
+
+  if (score >= 80) {
+    return { score, emoji: "😄", label: "Excellent Mood — Class is on fire!", colorClass: "text-emerald-700 dark:text-emerald-300", badgeClass: "bg-emerald-100 dark:bg-emerald-900/40 border-emerald-300 dark:border-emerald-700" };
+  } else if (score >= 60) {
+    return { score, emoji: "🙂", label: "Good Mood", colorClass: "text-blue-700 dark:text-blue-300", badgeClass: "bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700" };
+  } else if (score >= 40) {
+    return { score, emoji: "😐", label: "Average Mood", colorClass: "text-amber-700 dark:text-amber-300", badgeClass: "bg-amber-100 dark:bg-amber-900/40 border-amber-300 dark:border-amber-700" };
+  } else {
+    return { score, emoji: "😟", label: "Needs Attention", colorClass: "text-red-700 dark:text-red-300", badgeClass: "bg-red-100 dark:bg-red-900/40 border-red-300 dark:border-red-700" };
+  }
+}
 
 export function TeacherAttendancePage() {
   const { tenantId: schoolId } = useTenant();
@@ -38,6 +82,9 @@ export function TeacherAttendancePage() {
 
   // Top 3 scorers: map of user_id -> rank (0,1,2)
   const [topScorerRanks, setTopScorerRanks] = useState<Record<string, number>>({});
+
+  // Class Mood Score
+  const [classMood, setClassMood] = useState<MoodInfo | null>(null);
 
   const supabase = createClient();
 
@@ -110,6 +157,57 @@ export function TeacherAttendancePage() {
     }
   };
 
+  const fetchClassMood = async (classId: string, studentList: Student[]) => {
+    if (studentList.length === 0) { setClassMood(null); return; }
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+    const today = now.toISOString().split("T")[0];
+
+    const { data } = await supabase
+      .from("daily_attendance")
+      .select("student_id, date, status")
+      .eq("school_id", schoolId)
+      .eq("class_id", classId)
+      .gte("date", firstOfMonth)
+      .lte("date", today);
+
+    if (!data || data.length === 0) { setClassMood(null); return; }
+
+    const totalCount = data.length;
+    const presentCount = (data as any[]).filter(r => r.status === "present").length;
+    const presentPct = totalCount > 0 ? (presentCount / totalCount) * 100 : 0;
+
+    // Calculate streak: consecutive school days where ALL students were >= 80% present
+    const schoolDays = getSchoolDaysThisMonth();
+    const studentIds = studentList.map(s => s.user_id);
+
+    // Group by date: attendance records per date
+    const byDate: Record<string, { present: number; total: number }> = {};
+    for (const row of data as any[]) {
+      if (!isSchoolDay(row.date)) continue;
+      if (!byDate[row.date]) byDate[row.date] = { present: 0, total: 0 };
+      byDate[row.date].total += 1;
+      if (row.status === "present") byDate[row.date].present += 1;
+    }
+
+    // Walk backwards from the most recent day to find streak
+    let streak = 0;
+    for (let i = schoolDays.length - 1; i >= 0; i--) {
+      const day = schoolDays[i];
+      const rec = byDate[day];
+      if (!rec || rec.total === 0) break;
+      const dayPct = (rec.present / rec.total) * 100;
+      if (dayPct >= 80) {
+        streak += 1;
+      } else {
+        break;
+      }
+    }
+
+    const mood = computeMoodBadge(presentPct, streak);
+    setClassMood(mood);
+  };
+
   const fetchTopScorers = async (studentList: Student[]) => {
     if (studentList.length === 0) { setTopScorerRanks({}); return; }
     const studentIds = studentList.map(s => s.user_id);
@@ -143,9 +241,10 @@ export function TeacherAttendancePage() {
     setLoading(true);
     setMonthAvgPercent(null);
     setTopScorerRanks({});
+    setClassMood(null);
     const { data } = await supabase
       .from("students")
-      .select("user_id, enrollment_number, roll_number, first_name, last_name, parent_phone, users:user_id(full_name)")
+      .select("id, user_id, enrollment_number, roll_number, first_name, last_name, parent_phone, users:user_id(full_name)")
       .eq("class_id", classId);
     if (data) {
       setStudents(data as any);
@@ -153,6 +252,7 @@ export function TeacherAttendancePage() {
       data.forEach((s: any) => { defaultAtt[s.user_id] = "present"; });
       setAttendance(defaultAtt);
       fetchTopScorers(data as any);
+      fetchClassMood(classId, data as any);
     }
     setLoading(false);
     fetchMonthAvg(classId);
@@ -187,7 +287,8 @@ export function TeacherAttendancePage() {
       const today = new Date().toISOString().split("T")[0];
       const records = students.map(s => ({
         school_id: schoolId!,
-        student_id: s.user_id,
+        // Persist canonical students.id (matches the FK + admin/report pages).
+        student_id: s.id,
         class_id: selectedClass,
         date: today,
         status: attendance[s.user_id],
@@ -337,6 +438,15 @@ export function TeacherAttendancePage() {
               ⭐ Top 3 scorers highlighted below
             </span>
           )}
+        </div>
+      )}
+
+      {/* Class Mood Score badge */}
+      {classMood !== null && students.length > 0 && (
+        <div className={`inline-flex items-center gap-2.5 rounded-full border px-4 py-2 text-sm font-semibold ${classMood.badgeClass} ${classMood.colorClass}`}>
+          <span className="text-xl leading-none" aria-hidden="true">{classMood.emoji}</span>
+          <span>{classMood.label}</span>
+          <span className="ml-1 text-xs font-bold opacity-70">{classMood.score}/100</span>
         </div>
       )}
 

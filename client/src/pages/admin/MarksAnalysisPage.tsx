@@ -4,7 +4,9 @@ import { useTenant } from "@/components/layout/DashboardLayout";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 type Exam = { id: string; name: string; start_date: string };
-type Mark = { student_id: string; subject: string; marks_obtained: number; max_marks: number; students?: { name: string; classes?: { name: string } | null } | null };
+type Mark = { student_id: string; subject: string; marks_obtained: number; max_marks: number; students?: { name: string; classes?: { grade_level: string; section: string } | null } | null };
+const classLabel = (c?: { grade_level?: string; section?: string } | null) =>
+  c ? `${c.grade_level ?? ""}${c.section ? " - " + c.section : ""}`.trim() || "—" : "—";
 
 type SubjectStats = {
   subject: string;
@@ -22,7 +24,7 @@ export function MarksAnalysisPage() {
   const { tenantId: schoolId } = useTenant();
 
   const [exams, setExams] = useState<Exam[]>([]);
-  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+  const [classes, setClasses] = useState<{ id: string; grade_level: string; section: string }[]>([]);
   const [selectedExam, setSelectedExam] = useState("");
   const [selectedClass, setSelectedClass] = useState("all");
   const [marks, setMarks] = useState<Mark[]>([]);
@@ -32,7 +34,7 @@ export function MarksAnalysisPage() {
     if (!schoolId) return;
     Promise.all([
       supabase.from("exams").select("id, name, start_date").eq("school_id", schoolId).order("start_date", { ascending: false }),
-      supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
+      supabase.from("classes").select("id, grade_level, section").eq("school_id", schoolId).order("grade_level"),
     ]).then(([eRes, cRes]) => {
       setExams(eRes.data || []);
       setClasses(cRes.data || []);
@@ -43,10 +45,10 @@ export function MarksAnalysisPage() {
     if (!schoolId || !selectedExam) { setMarks([]); return; }
     setLoading(true);
     let q = supabase.from("exam_marks")
-      .select("student_id, subject, marks_obtained, max_marks, students(name, classes(name))")
+      .select("student_id, subject, marks_obtained, max_marks, students(name, classes(grade_level, section))")
       .eq("school_id", schoolId).eq("exam_id", selectedExam);
     supabase.from("exam_marks")
-      .select("student_id, subject, marks_obtained, max_marks, students(name, class_id, classes(name))")
+      .select("student_id, subject, marks_obtained, max_marks, students(name, class_id, classes(grade_level, section))")
       .eq("school_id", schoolId).eq("exam_id", selectedExam)
       .then(async ({ data }) => {
         if (!data) { setMarks([]); setLoading(false); return; }
@@ -107,7 +109,7 @@ export function MarksAnalysisPage() {
         <select title="Filter by class" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}
           className="border border-border rounded-lg px-3 py-2 text-sm bg-background">
           <option value="all">All Classes</option>
-          {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {classes.map(c => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
         </select>
       </div>
 
