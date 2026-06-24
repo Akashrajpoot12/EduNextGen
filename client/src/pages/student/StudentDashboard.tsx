@@ -8,27 +8,54 @@ import {
   TrendingUp, BookMarked, AlertTriangle, Star, Trophy, BookText, Radar
 } from "lucide-react";
 
+// ── Study Tips ────────────────────────────────────────────────────────────────
+const TIPS = [
+  { subject: "Math", tip: "Practice 5 problems daily — consistency beats cramming." },
+  { subject: "Science", tip: "Draw diagrams for every concept you learn." },
+  { subject: "English", tip: "Read one paragraph aloud daily to improve comprehension." },
+  { subject: "History", tip: "Create a timeline for every chapter — dates become easy." },
+  { subject: "Geography", tip: "Always relate concepts to your own city/region first." },
+  { subject: "Math", tip: "Write formulas on sticky notes and place them on your desk." },
+  { subject: "Science", tip: "Explain a concept to an imaginary student — teaching builds mastery." },
+  { subject: "English", tip: "Keep a vocabulary journal; add 3 new words every day." },
+  { subject: "History", tip: "Connect historical events to causes and effects — not just dates." },
+  { subject: "Computer Science", tip: "Code every day, even for 15 minutes — muscle memory is real." },
+  { subject: "Physics", tip: "Solve numericals step-by-step; never skip units." },
+  { subject: "Chemistry", tip: "Use flashcards for equations and element properties." },
+  { subject: "Biology", tip: "Label diagrams from memory, then compare with the textbook." },
+  { subject: "Math", tip: "Review your mistakes more than your correct answers — errors teach more." },
+  { subject: "English", tip: "Summarise every chapter you read in 3 sentences." },
+  { subject: "Science", tip: "Watch one short documentary per week to connect theory to the real world." },
+  { subject: "Social Studies", tip: "Make mind maps to link places, people, and events." },
+  { subject: "Languages", tip: "Write a short paragraph in the language you are learning each day." },
+  { subject: "Economics", tip: "Read one news article daily and relate it to a concept from class." },
+  { subject: "Art", tip: "Sketch for 10 minutes without judgement — practice over perfection." },
+];
+
+function getDayOfYear(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date.getTime() - start.getTime();
+  return Math.floor(diff / 86400000);
+}
+
 // ── SVG Radar Chart ──────────────────────────────────────────────────────────
 function RadarChart({ subjects }: { subjects: { name: string; pct: number }[] }) {
   const cx = 100, cy = 100, r = 70;
   const n = subjects.length;
   if (n < 3) return null;
 
-  // Angle for each axis: start at top (-90°)
   const angle = (i: number) => ((2 * Math.PI * i) / n) - Math.PI / 2;
   const pt = (i: number, radius: number) => ({
     x: cx + radius * Math.cos(angle(i)),
     y: cy + radius * Math.sin(angle(i)),
   });
 
-  // Background rings at 25%, 50%, 75%, 100%
   const ringPcts = [0.25, 0.5, 0.75, 1];
   const ringPath = (frac: number) => {
     const pts = subjects.map((_, i) => pt(i, r * frac));
     return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ") + " Z";
   };
 
-  // Data polygon
   const dataPath = subjects
     .map((s, i) => {
       const p = pt(i, r * (Math.min(100, Math.max(0, s.pct)) / 100));
@@ -38,23 +65,18 @@ function RadarChart({ subjects }: { subjects: { name: string; pct: number }[] })
 
   return (
     <svg viewBox="0 0 200 200" className="w-48 h-48">
-      {/* Background rings */}
       {ringPcts.map((frac) => (
         <path key={frac} d={ringPath(frac)} fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.25)" strokeWidth="0.8" />
       ))}
-      {/* Axis lines */}
       {subjects.map((_, i) => {
         const tip = pt(i, r);
         return <line key={i} x1={cx} y1={cy} x2={tip.x.toFixed(2)} y2={tip.y.toFixed(2)} stroke="rgba(139,92,246,0.3)" strokeWidth="0.8" />;
       })}
-      {/* Data polygon */}
       <path d={dataPath} fill="rgba(196,75,196,0.4)" stroke="#C44BC4" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Data points */}
       {subjects.map((s, i) => {
         const p = pt(i, r * (Math.min(100, Math.max(0, s.pct)) / 100));
         return <circle key={i} cx={p.x.toFixed(2)} cy={p.y.toFixed(2)} r="3" fill="#C44BC4" />;
       })}
-      {/* Labels */}
       {subjects.map((s, i) => {
         const labelR = r + 16;
         const p = pt(i, labelR);
@@ -70,6 +92,21 @@ function RadarChart({ subjects }: { subjects: { name: string; pct: number }[] })
     </svg>
   );
 }
+
+// ── Achievement Badge definitions ────────────────────────────────────────────
+interface BadgeDef {
+  key: string;
+  emoji: string;
+  label: string;
+  pillClass: string;
+}
+
+const BADGE_DEFS: BadgeDef[] = [
+  { key: "perfect_attendance", emoji: "🔥", label: "Perfect Attendance", pillClass: "bg-gradient-to-r from-orange-400 to-red-500 text-white" },
+  { key: "top_scorer",         emoji: "🏆", label: "Top Scorer",         pillClass: "bg-gradient-to-r from-amber-400 to-yellow-500 text-white" },
+  { key: "homework_hero",      emoji: "📚", label: "Homework Hero",      pillClass: "bg-gradient-to-r from-blue-400 to-indigo-500 text-white" },
+  { key: "streak_master",      emoji: "⚡", label: "Streak Master",      pillClass: "bg-gradient-to-r from-violet-400 to-purple-600 text-white" },
+];
 
 export function StudentDashboard() {
   const supabase = createClient();
@@ -97,7 +134,6 @@ export function StudentDashboard() {
   // ── Personal Goal Tracker ────────────────────────────────────────────────
   const [goals, setGoals]                              = useState<Record<string, number>>({});
 
-  // Load goals from localStorage once userId is known
   useEffect(() => {
     if (!userId) return;
     try {
@@ -121,7 +157,11 @@ export function StudentDashboard() {
   const [syllabusProgress, setSyllabusProgress]       = useState<{ subject: string; completed: number; total: number }[]>([]);
   const [feeDueDateChip, setFeeDueDateChip]           = useState<{ amount: number; daysUntil: number; dueDate: string } | null>(null);
 
-  // ref callback for dynamic progress bar widths (no inline styles)
+  // ── Attendance streak (consecutive days present) ─────────────────────────
+  const [attendanceStreak, setAttendanceStreak]        = useState<number>(0);
+  // ── Homework submitted count ─────────────────────────────────────────────
+  const [homeworkSubmittedCount, setHomeworkSubmittedCount] = useState<number>(0);
+
   const progressBarRef = useCallback((el: HTMLDivElement | null, pct: number) => {
     if (el) el.style.width = `${Math.min(100, Math.max(0, pct))}%`;
   }, []);
@@ -134,7 +174,6 @@ export function StudentDashboard() {
         if (!user) { setLoading(false); return; }
         setUserId(user.id);
 
-        // ── Student profile ───────────────────────────────
         const { data: student } = await supabase
           .from("students")
           .select("id, user_id, class_id, first_name, last_name, roll_number, classes:class_id(name, grade_level, section)")
@@ -163,24 +202,15 @@ export function StudentDashboard() {
           noticeData, feeData,
           ttData, leaveData,
         ] = await Promise.all([
-          // Attendance this month
-          supabase.from("daily_attendance").select("*",{count:"exact",head:true}).eq("student_id",user.id).gte("date",monthStart),
-          supabase.from("daily_attendance").select("*",{count:"exact",head:true}).eq("student_id",user.id).eq("status","present").gte("date",monthStart),
-          // Today
-          supabase.from("daily_attendance").select("status").eq("student_id",user.id).eq("date",today).maybeSingle(),
-          // Homework count
+          supabase.from("daily_attendance").select("*",{count:"exact",head:true}).eq("student_id",student.id).gte("date",monthStart),
+          supabase.from("daily_attendance").select("*",{count:"exact",head:true}).eq("student_id",student.id).eq("status","present").gte("date",monthStart),
+          supabase.from("daily_attendance").select("status").eq("student_id",student.id).eq("date",today).maybeSingle(),
           supabase.from("homework").select("*",{count:"exact",head:true}).eq("class_id",student.class_id).eq("school_id",schoolId).gte("due_date",today),
-          // Upcoming homework (next 7 days)
           supabase.from("homework").select("id,title,subject,due_date").eq("class_id",student.class_id).eq("school_id",schoolId).gte("due_date",today).lte("due_date",next7days).order("due_date").limit(4),
-          // Recent marks
-          supabase.from("exam_marks").select("marks_obtained,grade,exams:exam_id(name,total_marks)").eq("student_id",user.id).order("created_at",{ascending:false}).limit(4),
-          // Notices
+          supabase.from("exam_marks").select("marks_obtained,grade,exams:exam_id(name,total_marks)").eq("student_id",student.id).order("created_at",{ascending:false}).limit(4),
           supabase.from("announcements").select("id,title,priority,created_at").eq("school_id",schoolId).in("audience",["all","students"]).order("created_at",{ascending:false}).limit(4),
-          // Pending fees
           supabase.from("student_fee_assignments").select("amount,paid_amount,due_date,status").eq("student_id",student.id).eq("status","pending").limit(5),
-          // Today's timetable
           supabase.from("timetable").select("period_number,subject,start_time,end_time,teacher:teacher_id(full_name)").eq("class_id",student.class_id).eq("school_id",schoolId).eq("day_of_week",dayName).order("period_number"),
-          // Pending leave
           supabase.from("leave_requests").select("id",{count:"exact",head:true}).eq("student_id",student.id).eq("status","pending"),
         ]);
 
@@ -190,12 +220,43 @@ export function StudentDashboard() {
         setUpcomingHW(hwUpcoming.data || []);
         setRecentMarks(lastMarks.data || []);
 
-        // ── Radar chart: group all exam marks by subject ─────────────────
+        // ── Attendance streak ────────────────────────────────────────────
+        try {
+          const { data: recentAttendance } = await supabase
+            .from("daily_attendance")
+            .select("date, status")
+            .eq("student_id", student.id)
+            .order("date", { ascending: false })
+            .limit(60);
+
+          if (recentAttendance && recentAttendance.length > 0) {
+            let streak = 0;
+            for (const rec of recentAttendance as any[]) {
+              if (rec.status === "present") {
+                streak += 1;
+              } else {
+                break;
+              }
+            }
+            setAttendanceStreak(streak);
+          }
+        } catch (_) {}
+
+        // ── Homework submitted count ─────────────────────────────────────
+        try {
+          const { count: submittedCount } = await supabase
+            .from("homework_submissions")
+            .select("*", { count: "exact", head: true })
+            .eq("student_id", student.id);
+          setHomeworkSubmittedCount(submittedCount || 0);
+        } catch (_) {}
+
+        // ── Radar chart ──────────────────────────────────────────────────
         try {
           const { data: allMarks } = await supabase
             .from("exam_marks")
             .select("marks_obtained, exams:exam_id(subject, total_marks)")
-            .eq("student_id", user.id);
+            .eq("student_id", student.id);
           if (allMarks && allMarks.length > 0) {
             const subMap: Record<string, { total: number; maxTotal: number; count: number }> = {};
             for (const row of allMarks) {
@@ -214,17 +275,16 @@ export function StudentDashboard() {
             if (radarPoints.length >= 3) setSubjectRadarData(radarPoints);
           }
         } catch (_) {}
+
         setNotices(noticeData.data || []);
         setTimetableToday(ttData.data || []);
         setPendingLeave(leaveData.count || 0);
 
-        // Pending fee total
         if (feeData.data?.length) {
           const total_pending = feeData.data.reduce((s: number, f: any) => s + ((f.amount || 0) - (f.paid_amount || 0)), 0);
           setPendingFee(total_pending);
         }
 
-        // Latest grade
         if (lastMarks.data?.[0]) {
           const m = lastMarks.data[0];
           const pct = m.marks_obtained != null ? Math.round((m.marks_obtained / ((m.exams as any)?.total_marks || 100)) * 100) : null;
@@ -232,7 +292,7 @@ export function StudentDashboard() {
           setLatestExam((m.exams as any)?.name || "");
         }
 
-        // ── Feature 1: Class rank ─────────────────────────────────────────
+        // ── Class rank ───────────────────────────────────────────────────
         try {
           const { data: allStudentIds } = await supabase
             .from("students")
@@ -248,24 +308,20 @@ export function StudentDashboard() {
               .in("student_id", ids);
 
             if (classMarks && classMarks.length > 0) {
-              // Sum marks per student
               const totalsMap: Record<string, number> = {};
               for (const row of classMarks) {
                 if (!totalsMap[row.student_id]) totalsMap[row.student_id] = 0;
                 totalsMap[row.student_id] += row.marks_obtained || 0;
               }
               const myTotal = totalsMap[student.id] || 0;
-              // Rank = number of students with strictly higher total + 1
               const rank = Object.values(totalsMap).filter(t => t > myTotal).length + 1;
               setClassRank(rank);
               setClassSize(Object.keys(totalsMap).length);
             }
           }
-        } catch (_) {
-          // Gracefully skip if exam_marks is unavailable
-        }
+        } catch (_) {}
 
-        // ── Feature 2: Syllabus progress ─────────────────────────────────
+        // ── Syllabus progress ─────────────────────────────────────────────
         try {
           const { data: syllabusTopics } = await supabase
             .from("syllabus_topics")
@@ -281,18 +337,15 @@ export function StudentDashboard() {
               subjectMap[sub].total += 1;
               if (t.status === "completed") subjectMap[sub].completed += 1;
             }
-            // Take top 4 subjects by total topics
             const sorted = Object.entries(subjectMap)
               .sort((a, b) => b[1].total - a[1].total)
               .slice(0, 4)
               .map(([subject, v]) => ({ subject, ...v }));
             setSyllabusProgress(sorted);
           }
-        } catch (_) {
-          // Gracefully skip if syllabus_topics table doesn't exist
-        }
+        } catch (_) {}
 
-        // ── Feature 3: Fee due date chip ─────────────────────────────────
+        // ── Fee due date chip ─────────────────────────────────────────────
         try {
           const { data: pendingFees } = await supabase
             .from("student_fee_assignments")
@@ -303,7 +356,6 @@ export function StudentDashboard() {
             .limit(10);
 
           if (pendingFees && pendingFees.length > 0) {
-            // Find earliest due_date that has remaining balance
             const earliest = pendingFees
               .filter((f: any) => (f.amount || 0) - (f.paid_amount || 0) > 0 && f.due_date)
               .sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0];
@@ -314,9 +366,7 @@ export function StudentDashboard() {
               setFeeDueDateChip({ amount: remaining, daysUntil, dueDate: earliest.due_date });
             }
           }
-        } catch (_) {
-          // Gracefully skip
-        }
+        } catch (_) {}
 
       } catch (err) {
         console.error("Dashboard error:", err);
@@ -325,6 +375,30 @@ export function StudentDashboard() {
       }
     })();
   }, [schoolId]);
+
+  // ── Derived: Achievement Badges ──────────────────────────────────────────
+  const earnedBadges = useMemo<BadgeDef[]>(() => {
+    const earned: BadgeDef[] = [];
+    if (attendancePct !== null && attendancePct >= 95) {
+      earned.push(BADGE_DEFS.find(b => b.key === "perfect_attendance")!);
+    }
+    if (classRank === 1) {
+      earned.push(BADGE_DEFS.find(b => b.key === "top_scorer")!);
+    }
+    if (homeworkSubmittedCount >= 10) {
+      earned.push(BADGE_DEFS.find(b => b.key === "homework_hero")!);
+    }
+    if (attendanceStreak >= 10) {
+      earned.push(BADGE_DEFS.find(b => b.key === "streak_master")!);
+    }
+    return earned;
+  }, [attendancePct, classRank, homeworkSubmittedCount, attendanceStreak]);
+
+  // ── Derived: Study Tip of the Day ────────────────────────────────────────
+  const studyTip = useMemo(() => {
+    const day = getDayOfYear(new Date());
+    return TIPS[day % TIPS.length];
+  }, []);
 
   const fmtDate  = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
   const daysLeft = (d: string) => {
@@ -353,7 +427,6 @@ export function StudentDashboard() {
             <h1 className="text-2xl font-bold text-foreground">
               Welcome back, {studentName || "Student"}! 👋
             </h1>
-            {/* ── Class rank badge ─────────────────────────────────────── */}
             {classRank !== null && classSize !== null && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 text-xs font-semibold">
                 <Trophy className="w-3.5 h-3.5" />
@@ -366,7 +439,6 @@ export function StudentDashboard() {
             <p className="text-sm text-muted-foreground">
               {className}{rollNo ? ` · Roll No. ${rollNo}` : ""} · {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
             </p>
-            {/* ── Fee due date chip ─────────────────────────────────────── */}
             {feeDueDateChip && (
               <Link
                 to={`/${tenant}/student/fees`}
@@ -449,6 +521,24 @@ export function StudentDashboard() {
               <p className="text-xs text-muted-foreground mt-0.5">Today's Status</p>
             </div>
           </div>
+
+          {/* ── Achievement Badges ──────────────────── */}
+          {earnedBadges.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">My Achievements</p>
+              <div className="flex flex-wrap gap-2">
+                {earnedBadges.map(badge => (
+                  <span
+                    key={badge.key}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm select-none ${badge.pillClass}`}
+                  >
+                    <span className="text-sm leading-none">{badge.emoji}</span>
+                    {badge.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── 2nd row: Fee alert + Leave pending ─ */}
           {(pendingFee !== null && pendingFee > 0) || pendingLeave > 0 ? (
@@ -737,6 +827,20 @@ export function StudentDashboard() {
                   {a.label}
                 </Link>
               ))}
+            </div>
+          </div>
+
+          {/* ── Study Tip of the Day ────────────── */}
+          <div className="rounded-xl border border-violet-500/20 bg-violet-500/8 p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl leading-none flex-shrink-0 mt-0.5">💡</span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-1">
+                  Tip of the Day
+                </p>
+                <p className="text-sm text-foreground italic leading-relaxed">"{studyTip.tip}"</p>
+                <p className="text-xs text-muted-foreground mt-1.5">For {studyTip.subject}</p>
+              </div>
             </div>
           </div>
         </>

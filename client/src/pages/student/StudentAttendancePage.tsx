@@ -21,7 +21,12 @@ export function StudentAttendancePage() {
     (async () => {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setLoading(false); return; }
+
+      // Resolve the canonical students.id for this login (child tables key on it).
+      const { data: student } = await supabase
+        .from("students").select("id").eq("user_id", user.id).maybeSingle();
+      if (!student) { setRecords([]); setLoading(false); return; }
 
       const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
       const endDate   = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(year, month + 1, 0).getDate()}`;
@@ -29,7 +34,7 @@ export function StudentAttendancePage() {
       const { data } = await supabase
         .from("daily_attendance")
         .select("date, status")
-        .eq("student_id", user.id)
+        .eq("student_id", student.id)
         .gte("date", startDate)
         .lte("date", endDate)
         .order("date", { ascending: true });
