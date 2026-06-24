@@ -10,6 +10,9 @@
 credentials.md
 **/credentials.md
 
+# Claude Code local workspace (never commit — caused stray git submodules)
+.claude/worktrees/
+
 # Dependency directories
 node_modules/
 jspm_packages/
