@@ -148,20 +148,20 @@ export function TimetablePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Class Timetable</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage weekly schedules for classes and assign teachers.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Class Timetable</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage weekly schedules for classes and assign teachers.</p>
         </div>
       </div>
 
-      <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
+      <Card className="bg-card backdrop-blur-xl border-border shadow-xl">
         <CardContent className="p-6">
           <div className="max-w-md space-y-2">
-            <Label className="text-slate-300">Select Class</Label>
+            <Label className="text-muted-foreground">Select Class</Label>
             <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-              <SelectTrigger className="bg-slate-950 border-white/10 text-white">
+              <SelectTrigger className="bg-background border-border text-foreground">
                 <SelectValue placeholder="Select a class to view timetable" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-white/10 text-white">
+              <SelectContent className="bg-card border-border text-foreground">
                 {classes.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>{c.grade_level} - Sec {c.section}</SelectItem>
                 ))}
@@ -172,10 +172,10 @@ export function TimetablePage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[425px]">
+        <DialogContent className="bg-card border-border text-foreground sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Assign Class Period</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               Assign a subject and teacher for {DAYS_OF_WEEK[parseInt(day)]}, Period {period}.
             </DialogDescription>
           </DialogHeader>
@@ -188,13 +188,13 @@ export function TimetablePage() {
                 onChange={(e) => setSubject(e.target.value)} 
                 placeholder="e.g. Mathematics"
                 required 
-                className="bg-slate-950 border-white/10 text-white" 
+                className="bg-background border-border text-foreground" 
               />
             </div>
             <div className="space-y-2">
               <Label>Assign Teacher</Label>
               <select 
-                className="w-full h-10 px-3 py-2 bg-slate-950 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full h-10 px-3 py-2 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 value={teacherId}
                 onChange={(e) => setTeacherId(e.target.value)}
                 required
@@ -213,7 +213,7 @@ export function TimetablePage() {
                   type="time"
                   value={startTime} 
                   onChange={(e) => setStartTime(e.target.value)} 
-                  className="bg-slate-950 border-white/10 text-white [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" 
+                  className="bg-background border-border text-foreground [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" 
                 />
               </div>
               <div className="space-y-2">
@@ -223,7 +223,7 @@ export function TimetablePage() {
                   type="time"
                   value={endTime} 
                   onChange={(e) => setEndTime(e.target.value)} 
-                  className="bg-slate-950 border-white/10 text-white [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" 
+                  className="bg-background border-border text-foreground [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" 
                 />
               </div>
             </div>
@@ -242,20 +242,20 @@ export function TimetablePage() {
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
         </div>
       ) : !selectedClassId ? (
-        <div className="text-center p-12 border border-white/5 rounded-xl bg-slate-900/20">
-          <p className="text-slate-400">Please select a class to view its timetable.</p>
+        <div className="text-center p-12 border border-border rounded-xl bg-card/20">
+          <p className="text-muted-foreground">Please select a class to view its timetable.</p>
         </div>
       ) : isFetchingTimetable ? (
         <div className="flex justify-center p-12">
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
         </div>
       ) : (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl overflow-hidden">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-slate-300">
-              <thead className="text-xs uppercase bg-slate-950/80 text-slate-400 border-b border-white/5">
+            <table className="w-full text-sm text-left text-muted-foreground">
+              <thead className="text-xs uppercase bg-muted text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 w-32 border-r border-white/5">Day / Period</th>
+                  <th className="px-6 py-4 w-32 border-r border-border">Day / Period</th>
                   {PERIODS.map(p => (
                     <th key={p} className="px-4 py-4 text-center min-w-[120px]">Period {p}</th>
                   ))}
@@ -263,22 +263,22 @@ export function TimetablePage() {
               </thead>
               <tbody>
                 {DAYS_OF_WEEK.map((dayName, dIdx) => (
-                  <tr key={dayName} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 font-bold text-white border-r border-white/5 bg-slate-950/30">
+                  <tr key={dayName} className="border-b border-border hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-foreground border-r border-border bg-background/30">
                       {dayName}
                     </td>
                     {PERIODS.map(pNum => {
                       const cell = getCellData(dIdx, pNum);
                       return (
-                        <td key={pNum} className="px-2 py-2 text-center align-top group relative border-r border-white/5 last:border-0 hover:bg-white/5">
+                        <td key={pNum} className="px-2 py-2 text-center align-top group relative border-r border-border last:border-0 hover:bg-muted/50">
                           {cell ? (
                             <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md h-full flex flex-col justify-center cursor-pointer" onClick={() => openAssignModal(dIdx, pNum)}>
                               <p className="font-bold text-emerald-400 text-xs truncate">{cell.subject}</p>
-                              <p className="text-[10px] text-slate-400 truncate mt-1">{cell.users?.full_name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate mt-1">{cell.users?.full_name}</p>
                             </div>
                           ) : (
-                            <div className="p-2 border border-dashed border-white/10 rounded-md h-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onClick={() => openAssignModal(dIdx, pNum)}>
-                              <Plus className="w-4 h-4 text-slate-500" />
+                            <div className="p-2 border border-dashed border-border rounded-md h-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onClick={() => openAssignModal(dIdx, pNum)}>
+                              <Plus className="w-4 h-4 text-muted-foreground" />
                             </div>
                           )}
                         </td>

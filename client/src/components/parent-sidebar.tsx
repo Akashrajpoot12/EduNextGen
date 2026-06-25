@@ -81,7 +81,7 @@ export function ParentSidebar({ tenant }: { tenant: string }) {
     <div className="flex h-full w-64 flex-col bg-card border-r border-border backdrop-blur-xl">
       <div className="px-4 py-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-foreground font-bold text-sm flex-shrink-0 overflow-hidden shadow-md">
             {avatarUrl
               ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
               : initials}

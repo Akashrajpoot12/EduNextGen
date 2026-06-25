@@ -639,7 +639,7 @@ export function StudentsDirectory() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 print:bg-transparent">
           <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-sm overflow-hidden print:shadow-none print:border-none">
             {/* Fuchsia gradient header */}
-            <div className="bg-gradient-to-r from-fuchsia-600 to-purple-600 px-6 py-5 text-white">
+            <div className="bg-gradient-to-r from-fuchsia-600 to-purple-600 px-6 py-5 text-foreground">
               <p className="text-xs font-medium opacity-80 uppercase tracking-widest mb-0.5">Student ID Card</p>
               <h2 className="font-bold text-lg leading-tight">{school?.name || "School Name"}</h2>
             </div>
@@ -647,7 +647,7 @@ export function StudentsDirectory() {
             {/* Card body */}
             <div className="px-6 py-5 flex items-start gap-4">
               {/* Avatar */}
-              <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+              <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-foreground text-2xl font-bold">
                 {idCardStudent.name?.charAt(0)?.toUpperCase() || "?"}
               </div>
               <div className="flex-1 min-w-0">
@@ -698,7 +698,7 @@ export function StudentsDirectory() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90"
+                className="flex-1 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-foreground rounded-lg text-sm font-medium hover:opacity-90"
               >
                 Print ID Card
               </button>

@@ -92,18 +92,18 @@ export function InventoryPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Asset Inventory</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage school equipment, furniture, and supplies.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Asset Inventory</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage school equipment, furniture, and supplies.</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger render={<Button className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" />}>
             <Plus className="w-4 h-4 mr-2" /> Add Item
           </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[500px]">
+          <DialogContent className="bg-card border-border text-foreground sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Add New Asset</DialogTitle>
-              <DialogDescription className="text-slate-400">
+              <DialogDescription className="text-muted-foreground">
                 Record a new item in the school's inventory system.
               </DialogDescription>
             </DialogHeader>
@@ -117,16 +117,16 @@ export function InventoryPage() {
                     onChange={(e) => setItemName(e.target.value)} 
                     placeholder="e.g. Dell Monitor"
                     required 
-                    className="bg-slate-950 border-white/10 text-white" 
+                    className="bg-background border-border text-foreground" 
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Select value={category} onValueChange={setCategory} required>
-                    <SelectTrigger className="bg-slate-950 border-white/10 text-white">
+                    <SelectTrigger className="bg-background border-border text-foreground">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-white/10 text-white">
+                    <SelectContent className="bg-card border-border text-foreground">
                       <SelectItem value="Electronics">Electronics</SelectItem>
                       <SelectItem value="Furniture">Furniture</SelectItem>
                       <SelectItem value="Stationery">Stationery</SelectItem>
@@ -146,7 +146,7 @@ export function InventoryPage() {
                     value={quantity} 
                     onChange={(e) => setQuantity(e.target.value)} 
                     required 
-                    className="bg-slate-950 border-white/10 text-white" 
+                    className="bg-background border-border text-foreground" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -158,7 +158,7 @@ export function InventoryPage() {
                     value={unitPrice} 
                     onChange={(e) => setUnitPrice(e.target.value)} 
                     placeholder="e.g. 1500.00"
-                    className="bg-slate-950 border-white/10 text-white" 
+                    className="bg-background border-border text-foreground" 
                   />
                 </div>
               </div>
@@ -170,7 +170,7 @@ export function InventoryPage() {
                   onChange={(e) => setLocation(e.target.value)} 
                   placeholder="e.g. Computer Lab 1"
                   required 
-                  className="bg-slate-950 border-white/10 text-white" 
+                  className="bg-background border-border text-foreground" 
                 />
               </div>
               <DialogFooter className="pt-4">
@@ -186,8 +186,8 @@ export function InventoryPage() {
 
       <div className="flex gap-4 items-center">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <Input placeholder="Search inventory items..." className="pl-9 bg-slate-900/50 border-white/10 text-white" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search inventory items..." className="pl-9 bg-card border-border text-foreground" />
         </div>
       </div>
 
@@ -196,20 +196,20 @@ export function InventoryPage() {
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
         </div>
       ) : items.length === 0 ? (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 border border-white/5">
-              <PackageOpen className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 border border-border">
+              <PackageOpen className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No items in inventory</h3>
-            <p className="text-slate-400 mb-6 max-w-sm">Start tracking school assets like computers, desks, and supplies.</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">No items in inventory</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm">Start tracking school assets like computers, desks, and supplies.</p>
           </CardContent>
         </Card>
       ) : (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl overflow-hidden">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-slate-300">
-              <thead className="text-xs uppercase bg-slate-950/80 text-slate-400 border-b border-white/5">
+            <table className="w-full text-sm text-left text-muted-foreground">
+              <thead className="text-xs uppercase bg-muted text-muted-foreground border-b border-border">
                 <tr>
                   <th className="px-6 py-4">Item Name</th>
                   <th className="px-6 py-4">Category</th>
@@ -226,11 +226,11 @@ export function InventoryPage() {
                       key={item.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                      className="border-b border-border hover:bg-muted/50 transition-colors"
                     >
-                      <td className="px-6 py-4 font-medium text-white">{item.item_name}</td>
-                      <td className="px-6 py-4 text-slate-400">{item.category.replace('_', ' ')}</td>
-                      <td className="px-6 py-4 text-slate-400">{item.location}</td>
+                      <td className="px-6 py-4 font-medium text-foreground">{item.item_name}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{item.category.replace('_', ' ')}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{item.location}</td>
                       <td className="px-6 py-4 text-center font-bold text-emerald-400">{item.quantity}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold border ${getStatusColor(item.status)}`}>

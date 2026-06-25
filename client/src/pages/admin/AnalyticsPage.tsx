@@ -59,8 +59,8 @@ export function AnalyticsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Analytics & Reports</h1>
-          <p className="text-sm text-slate-400 mt-1">Real-time statistics and performance metrics for the school.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Analytics & Reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">Real-time statistics and performance metrics for the school.</p>
         </div>
       </div>
 
@@ -71,7 +71,7 @@ export function AnalyticsPage() {
       ) : (
         <>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl relative overflow-hidden group">
+            <Card className="bg-card backdrop-blur-xl border-border shadow-xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardContent className="p-6 relative z-10">
                 <div className="flex justify-between items-start mb-4">
@@ -80,12 +80,12 @@ export function AnalyticsPage() {
                   </div>
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">+12%</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white mb-1">{stats.totalStudents}</h3>
-                <p className="text-sm text-slate-400">Total Students</p>
+                <h3 className="text-3xl font-bold text-foreground mb-1">{stats.totalStudents}</h3>
+                <p className="text-sm text-muted-foreground">Total Students</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl relative overflow-hidden group">
+            <Card className="bg-card backdrop-blur-xl border-border shadow-xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardContent className="p-6 relative z-10">
                 <div className="flex justify-between items-start mb-4">
@@ -94,26 +94,26 @@ export function AnalyticsPage() {
                   </div>
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">+8%</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white mb-1">₹{stats.feesCollected.toLocaleString('en-IN')}</h3>
-                <p className="text-sm text-slate-400">Fees Collected (YTD)</p>
+                <h3 className="text-3xl font-bold text-foreground mb-1">₹{stats.feesCollected.toLocaleString('en-IN')}</h3>
+                <p className="text-sm text-muted-foreground">Fees Collected (YTD)</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl relative overflow-hidden group">
+            <Card className="bg-card backdrop-blur-xl border-border shadow-xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardContent className="p-6 relative z-10">
                 <div className="flex justify-between items-start mb-4">
                   <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
                     <Activity className="w-6 h-6 text-purple-400" />
                   </div>
-                  <span className="text-xs font-bold text-slate-400 bg-slate-500/10 px-2 py-1 rounded-full">Stable</span>
+                  <span className="text-xs font-bold text-muted-foreground bg-slate-500/10 px-2 py-1 rounded-full">Stable</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white mb-1">{stats.totalTeachers}</h3>
-                <p className="text-sm text-slate-400">Active Teachers</p>
+                <h3 className="text-3xl font-bold text-foreground mb-1">{stats.totalTeachers}</h3>
+                <p className="text-sm text-muted-foreground">Active Teachers</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl relative overflow-hidden group">
+            <Card className="bg-card backdrop-blur-xl border-border shadow-xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardContent className="p-6 relative z-10">
                 <div className="flex justify-between items-start mb-4">
@@ -121,29 +121,29 @@ export function AnalyticsPage() {
                     <TrendingUp className="w-6 h-6 text-amber-400" />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold text-white mb-1">{stats.activeClasses}</h3>
-                <p className="text-sm text-slate-400">Active Classes / Sections</p>
+                <h3 className="text-3xl font-bold text-foreground mb-1">{stats.activeClasses}</h3>
+                <p className="text-sm text-muted-foreground">Active Classes / Sections</p>
               </CardContent>
             </Card>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 mt-6">
-            <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl h-80 flex items-center justify-center">
+            <Card className="bg-card backdrop-blur-xl border-border shadow-xl h-80 flex items-center justify-center">
               <div className="text-center">
-                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
-                  <Activity className="w-8 h-8 text-slate-400" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 border border-border">
+                  <Activity className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <p className="text-slate-400">Monthly Revenue Chart</p>
-                <p className="text-xs text-slate-500 mt-2">Requires chart.js integration</p>
+                <p className="text-muted-foreground">Monthly Revenue Chart</p>
+                <p className="text-xs text-muted-foreground mt-2">Requires chart.js integration</p>
               </div>
             </Card>
-            <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl h-80 flex items-center justify-center">
+            <Card className="bg-card backdrop-blur-xl border-border shadow-xl h-80 flex items-center justify-center">
               <div className="text-center">
-                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
-                  <Users className="w-8 h-8 text-slate-400" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 border border-border">
+                  <Users className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <p className="text-slate-400">Attendance Trends</p>
-                <p className="text-xs text-slate-500 mt-2">Requires chart.js integration</p>
+                <p className="text-muted-foreground">Attendance Trends</p>
+                <p className="text-xs text-muted-foreground mt-2">Requires chart.js integration</p>
               </div>
             </Card>
           </div>

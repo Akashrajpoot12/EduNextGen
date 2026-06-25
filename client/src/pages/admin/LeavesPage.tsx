@@ -92,15 +92,15 @@ export function LeavesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Leave Management</h1>
-          <p className="text-sm text-slate-400 mt-1">Review and approve leave applications from staff and teachers.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Leave Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Review and approve leave applications from staff and teachers.</p>
         </div>
       </div>
 
       <div className="flex gap-4 items-center">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <Input placeholder="Search applications..." className="pl-9 bg-slate-900/50 border-white/10 text-white" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search applications..." className="pl-9 bg-card border-border text-foreground" />
         </div>
       </div>
 
@@ -109,13 +109,13 @@ export function LeavesPage() {
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
         </div>
       ) : leaves.length === 0 ? (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 border border-white/5">
-              <CalendarOff className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 border border-border">
+              <CalendarOff className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No leave applications</h3>
-            <p className="text-slate-400 mb-6 max-w-sm">You're all caught up. There are no pending leave requests.</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">No leave applications</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm">You're all caught up. There are no pending leave requests.</p>
           </CardContent>
         </Card>
       ) : (
@@ -128,31 +128,31 @@ export function LeavesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl hover:border-amber-500/30 transition-all group overflow-hidden flex flex-col h-full relative">
+                <Card className="bg-card backdrop-blur-xl border-border shadow-xl hover:border-amber-500/30 transition-all group overflow-hidden flex flex-col h-full relative">
                   <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-${leave.status === 'approved' ? 'emerald' : leave.status === 'rejected' ? 'red' : 'amber'}-500/10 to-transparent rounded-bl-full`} />
                   <CardContent className="p-6 relative z-10 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-lg font-bold text-white mb-1">{leave.users?.full_name || 'Unknown User'}</h3>
-                        <p className="text-xs text-slate-400">{leave.users?.email}</p>
+                        <h3 className="text-lg font-bold text-foreground mb-1">{leave.users?.full_name || 'Unknown User'}</h3>
+                        <p className="text-xs text-muted-foreground">{leave.users?.email}</p>
                       </div>
                       <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${getStatusColor(leave.status)}`}>
                         {leave.status}
                       </span>
                     </div>
                     
-                    <div className="bg-slate-950/50 rounded-lg p-3 border border-white/5 mb-4">
-                      <p className="text-xs text-slate-500 mb-1 uppercase font-bold tracking-wider">Leave Period</p>
-                      <p className="text-sm text-slate-300 font-medium">
+                    <div className="bg-muted rounded-lg p-3 border border-border mb-4">
+                      <p className="text-xs text-muted-foreground mb-1 uppercase font-bold tracking-wider">Leave Period</p>
+                      <p className="text-sm text-muted-foreground font-medium">
                         {formatDate(leave.start_date)} - {formatDate(leave.end_date)}
                       </p>
                       <p className="text-xs text-amber-400 mt-1 capitalize">{leave.leave_type}</p>
                     </div>
 
-                    <p className="text-sm text-slate-400 mb-6 line-clamp-3 italic flex-grow">"{leave.reason}"</p>
+                    <p className="text-sm text-muted-foreground mb-6 line-clamp-3 italic flex-grow">"{leave.reason}"</p>
                     
                     {leave.status.toLowerCase() === 'pending' && (
-                      <div className="grid grid-cols-2 gap-2 mt-auto pt-4 border-t border-white/5">
+                      <div className="grid grid-cols-2 gap-2 mt-auto pt-4 border-t border-border">
                         <Button 
                           variant="outline" 
                           size="sm" 

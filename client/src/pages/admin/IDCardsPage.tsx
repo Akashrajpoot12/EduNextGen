@@ -121,7 +121,7 @@ export function IDCardsPage() {
               <div className="flex items-start justify-between mb-1">
                 <p className="font-medium truncate flex-1">{s.name}</p>
                 <span className={`w-4 h-4 rounded border flex-shrink-0 ml-1 mt-0.5 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-border"}`}>
-                  {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                  {isSelected && <span className="text-foreground text-[10px] font-bold">✓</span>}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">{cls} · Roll {s.roll_number || "—"}</p>

@@ -102,10 +102,10 @@ interface BadgeDef {
 }
 
 const BADGE_DEFS: BadgeDef[] = [
-  { key: "perfect_attendance", emoji: "🔥", label: "Perfect Attendance", pillClass: "bg-gradient-to-r from-orange-400 to-red-500 text-white" },
-  { key: "top_scorer",         emoji: "🏆", label: "Top Scorer",         pillClass: "bg-gradient-to-r from-amber-400 to-yellow-500 text-white" },
-  { key: "homework_hero",      emoji: "📚", label: "Homework Hero",      pillClass: "bg-gradient-to-r from-blue-400 to-indigo-500 text-white" },
-  { key: "streak_master",      emoji: "⚡", label: "Streak Master",      pillClass: "bg-gradient-to-r from-violet-400 to-purple-600 text-white" },
+  { key: "perfect_attendance", emoji: "🔥", label: "Perfect Attendance", pillClass: "bg-gradient-to-r from-orange-400 to-red-500 text-foreground" },
+  { key: "top_scorer",         emoji: "🏆", label: "Top Scorer",         pillClass: "bg-gradient-to-r from-amber-400 to-yellow-500 text-foreground" },
+  { key: "homework_hero",      emoji: "📚", label: "Homework Hero",      pillClass: "bg-gradient-to-r from-blue-400 to-indigo-500 text-foreground" },
+  { key: "streak_master",      emoji: "⚡", label: "Streak Master",      pillClass: "bg-gradient-to-r from-violet-400 to-purple-600 text-foreground" },
 ];
 
 export function StudentDashboard() {

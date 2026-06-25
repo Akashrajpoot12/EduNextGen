@@ -21,7 +21,7 @@ type ClassSummary = {
 const STATUS_BTNS: { value: AttendanceStatus; label: string; active: string; inactive: string }[] = [
   { value: "present",  label: "P",        active: "bg-emerald-500 text-white border-emerald-500", inactive: "border-border text-muted-foreground hover:bg-emerald-50" },
   { value: "absent",   label: "A",        active: "bg-red-500 text-white border-red-500",         inactive: "border-border text-muted-foreground hover:bg-red-50" },
-  { value: "late",     label: "L",        active: "bg-amber-400 text-white border-amber-400",     inactive: "border-border text-muted-foreground hover:bg-amber-50" },
+  { value: "late",     label: "L",        active: "bg-amber-400 text-foreground border-amber-400",     inactive: "border-border text-muted-foreground hover:bg-amber-50" },
   { value: "half_day", label: "½",        active: "bg-blue-500 text-white border-blue-500",       inactive: "border-border text-muted-foreground hover:bg-blue-50" },
 ];
 

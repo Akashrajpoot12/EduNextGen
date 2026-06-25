@@ -102,18 +102,18 @@ export function HomeworkPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Homework & Assignments</h1>
-          <p className="text-sm text-slate-400 mt-1">Assign tasks and track student submissions.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Homework & Assignments</h1>
+          <p className="text-sm text-muted-foreground mt-1">Assign tasks and track student submissions.</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger render={<Button className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" />}>
             <Plus className="w-4 h-4 mr-2" /> Assign Homework
           </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[500px]">
+          <DialogContent className="bg-card border-border text-foreground sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Assign New Homework</DialogTitle>
-              <DialogDescription className="text-slate-400">
+              <DialogDescription className="text-muted-foreground">
                 Create a new assignment for a specific class.
               </DialogDescription>
             </DialogHeader>
@@ -121,10 +121,10 @@ export function HomeworkPage() {
               <div className="space-y-2">
                 <Label htmlFor="class">Select Class</Label>
                 <Select value={classId} onValueChange={setClassId} required>
-                  <SelectTrigger className="bg-slate-950 border-white/10 text-white">
+                  <SelectTrigger className="bg-background border-border text-foreground">
                     <SelectValue placeholder="Select a class" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-white/10 text-white">
+                  <SelectContent className="bg-card border-border text-foreground">
                     {classes.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>{c.grade_level} - Sec {c.section}</SelectItem>
                     ))}
@@ -139,7 +139,7 @@ export function HomeworkPage() {
                   onChange={(e) => setTitle(e.target.value)} 
                   placeholder="e.g. Chapter 4 Exercise"
                   required 
-                  className="bg-slate-950 border-white/10 text-white" 
+                  className="bg-background border-border text-foreground" 
                 />
               </div>
               <div className="space-y-2">
@@ -150,7 +150,7 @@ export function HomeworkPage() {
                   onChange={(e) => setDescription(e.target.value)} 
                   required 
                   rows={4}
-                  className="w-full flex rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  className="w-full flex rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                 />
               </div>
               <div className="space-y-2">
@@ -161,7 +161,7 @@ export function HomeworkPage() {
                   value={dueDate} 
                   onChange={(e) => setDueDate(e.target.value)} 
                   required 
-                  className="bg-slate-950 border-white/10 text-white [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" 
+                  className="bg-background border-border text-foreground [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" 
                 />
               </div>
               <DialogFooter className="pt-4">
@@ -180,13 +180,13 @@ export function HomeworkPage() {
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
         </div>
       ) : homeworks.length === 0 ? (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 border border-white/5">
-              <BookOpen className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 border border-border">
+              <BookOpen className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No homework assigned</h3>
-            <p className="text-slate-400 mb-6 max-w-sm">There are no active assignments currently. Create one to get started.</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">No homework assigned</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm">There are no active assignments currently. Create one to get started.</p>
           </CardContent>
         </Card>
       ) : (
@@ -199,28 +199,28 @@ export function HomeworkPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl hover:border-emerald-500/30 transition-all group overflow-hidden flex flex-col h-full">
+                <Card className="bg-card backdrop-blur-xl border-border shadow-xl hover:border-emerald-500/30 transition-all group overflow-hidden flex flex-col h-full">
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <CardContent className="p-6 relative z-10 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-4">
                       <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                         <FileText className="w-5 h-5 text-emerald-400" />
                       </div>
-                      <span className="px-2 py-1 rounded bg-slate-950/80 border border-white/10 text-xs text-slate-300 font-medium">
+                      <span className="px-2 py-1 rounded bg-muted border border-border text-xs text-muted-foreground font-medium">
                         {hw.classes?.grade_level} {hw.classes?.section}
                       </span>
                     </div>
                     
-                    <h3 className="text-lg font-bold text-white mb-2 line-clamp-1">{hw.title}</h3>
-                    <p className="text-sm text-slate-400 mb-6 line-clamp-2 flex-grow">{hw.description}</p>
+                    <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-1">{hw.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-6 line-clamp-2 flex-grow">{hw.description}</p>
                     
-                    <div className="space-y-3 pt-4 border-t border-white/5 mt-auto">
+                    <div className="space-y-3 pt-4 border-t border-border mt-auto">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Assigned by:</span>
-                        <span className="text-slate-300 font-medium">{hw.users?.full_name || 'Teacher'}</span>
+                        <span className="text-muted-foreground">Assigned by:</span>
+                        <span className="text-muted-foreground font-medium">{hw.users?.full_name || 'Teacher'}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Due Date:</span>
+                        <span className="text-muted-foreground">Due Date:</span>
                         <span className={`font-medium flex items-center ${new Date(hw.due_date) < new Date() ? 'text-red-400' : 'text-amber-400'}`}>
                           <Clock className="w-3 h-3 mr-1" /> {formatDate(hw.due_date)}
                         </span>

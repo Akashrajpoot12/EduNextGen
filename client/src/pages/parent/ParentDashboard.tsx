@@ -809,7 +809,7 @@ export function ParentDashboard() {
                   type="button"
                   disabled={leaveSubmitting || !leaveFrom || !leaveTo || !leaveReason.trim()}
                   onClick={submitLeave}
-                  className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 rounded-lg bg-amber-500 text-foreground text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {leaveSubmitting ? "Submitting…" : "Submit Leave Request"}
                 </button>

@@ -126,7 +126,7 @@ export function StudentProfileView() {
       {/* Header Card */}
       <div className="bg-card border border-border rounded-2xl p-6">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-purple-700 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-purple-700 flex items-center justify-center text-foreground text-2xl font-bold flex-shrink-0">
             {student.first_name?.[0]}{student.last_name?.[0]}
           </div>
           <div className="flex-1 min-w-0">

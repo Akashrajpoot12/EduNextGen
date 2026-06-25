@@ -203,7 +203,7 @@ export function ParentFeesPage() {
               onClick={() => setSelectedChild(c)}
               className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 selectedChild?.id === c.id
-                  ? "bg-amber-500 text-white border-amber-500"
+                  ? "bg-amber-500 text-foreground border-amber-500"
                   : "border-border hover:bg-muted"
               }`}>
               {c.first_name} {c.last_name}
@@ -330,7 +330,7 @@ export function ParentFeesPage() {
                       <button type="button"
                         disabled={paying === fee.id}
                         onClick={() => handlePay(fee)}
-                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-colors disabled:opacity-60">
+                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-foreground rounded-lg font-medium transition-colors disabled:opacity-60">
                         {paying === fee.id
                           ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing...</>
                           : <><CreditCard className="w-3.5 h-3.5" /> Pay Now</>}

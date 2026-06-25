@@ -156,7 +156,7 @@ export function StudentMessagesPage() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <MessageSquare className="w-10 h-10 mb-3 opacity-30" />
                   <p className="text-sm">No messages yet. Start the conversation!</p>
                 </div>
@@ -170,7 +170,7 @@ export function StudentMessagesPage() {
                         <div className="text-center text-xs text-muted-foreground/60 my-2">{formatDate(msg.created_at)}</div>
                       )}
                       <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm ${isMine ? "bg-purple-600 text-foreground rounded-br-sm" : "bg-muted text-foreground/80 rounded-bl-sm"}`}>
+                        <div className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm ${isMine ? "bg-purple-600 text-white rounded-br-sm" : "bg-muted text-white/80 rounded-bl-sm"}`}>
                           <p>{msg.content}</p>
                           <p className={`text-[10px] mt-1 ${isMine ? "text-purple-200/70 text-right" : "text-muted-foreground"}`}>{formatTime(msg.created_at)}</p>
                         </div>

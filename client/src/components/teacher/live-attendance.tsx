@@ -80,13 +80,13 @@ export function LiveAttendance() {
       </CardHeader>
       <CardContent className="pt-4">
         <div className="mb-4">
-          <p className="text-4xl font-black text-slate-900">{presentCount} <span className="text-sm font-medium text-slate-500">students present today</span></p>
+          <p className="text-4xl font-black text-slate-900">{presentCount} <span className="text-sm font-medium text-muted-foreground">students present today</span></p>
         </div>
         
         <div className="space-y-3 mt-6">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Access Grants</h4>
           {recentScans.length === 0 ? (
-            <p className="text-sm text-slate-500 italic">No scans recorded yet today.</p>
+            <p className="text-sm text-muted-foreground italic">No scans recorded yet today.</p>
           ) : (
             recentScans.map((scan, i) => (
               <div key={scan.id || i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -94,7 +94,7 @@ export function LiveAttendance() {
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
                   <p className="text-sm font-medium text-slate-700">Student ID: {scan.student_id.substring(0, 8).toUpperCase()}</p>
                 </div>
-                <p className="text-xs text-slate-400 font-medium tracking-wide">Just now</p>
+                <p className="text-xs text-muted-foreground font-medium tracking-wide">Just now</p>
               </div>
             ))
           )}

@@ -156,8 +156,8 @@ export function TeacherHomeworkPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Assignments</h1>
-          <p className="text-sm text-slate-400 mt-1">Assign and review homework for your classes.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Assignments</h1>
+          <p className="text-sm text-muted-foreground mt-1">Assign and review homework for your classes.</p>
         </div>
         <Button onClick={openCreate} className="bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20">
           <Plus className="w-4 h-4 mr-2" /> Assign Homework
@@ -166,10 +166,10 @@ export function TeacherHomeworkPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[500px]">
+        <DialogContent className="bg-card border-border text-foreground sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editingHw ? "Edit Assignment" : "Create Assignment"}</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {editingHw ? "Update the assignment details below." : "This will be instantly visible to students on their portal."}
             </DialogDescription>
           </DialogHeader>
@@ -177,10 +177,10 @@ export function TeacherHomeworkPage() {
             <div className="space-y-2">
               <Label>Select Class</Label>
               <Select value={classId} onValueChange={setClassId} required>
-                <SelectTrigger className="bg-slate-950 border-white/10 text-white">
+                <SelectTrigger className="bg-background border-border text-foreground">
                   <SelectValue placeholder="Choose a class" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/10 text-white">
+                <SelectContent className="bg-card border-border text-foreground">
                   {classes.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>Class {c.grade_level} - Sec {c.section}</SelectItem>
                   ))}
@@ -190,21 +190,21 @@ export function TeacherHomeworkPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Subject</Label>
-                <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Mathematics" required className="bg-slate-950 border-white/10 text-white" />
+                <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Mathematics" required className="bg-background border-border text-foreground" />
               </div>
               <div className="space-y-2">
                 <Label>Due Date</Label>
-                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required className="bg-slate-950 border-white/10 text-white" />
+                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required className="bg-background border-border text-foreground" />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Topic / Title</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Chapter 4 Exercises" required className="bg-slate-950 border-white/10 text-white" />
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Chapter 4 Exercises" required className="bg-background border-border text-foreground" />
             </div>
             <div className="space-y-2">
               <Label>Instructions</Label>
               <textarea value={description} onChange={e => setDescription(e.target.value)} required rows={3} title="Instructions" placeholder="Write instructions for students..."
-                className="w-full flex rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" />
+                className="w-full flex rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" />
             </div>
             <DialogFooter className="pt-4">
               <Button type="submit" disabled={isSubmitting} className="bg-blue-500 hover:bg-blue-600 text-white w-full">
@@ -218,13 +218,13 @@ export function TeacherHomeworkPage() {
 
       {/* Delete Confirm Dialog */}
       <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
-        <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[400px]">
+        <DialogContent className="bg-card border-border text-foreground sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Delete Assignment?</DialogTitle>
-            <DialogDescription className="text-slate-400">This action cannot be undone. All submissions for this assignment will also be removed.</DialogDescription>
+            <DialogDescription className="text-muted-foreground">This action cannot be undone. All submissions for this assignment will also be removed.</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setDeleteConfirmId(null)} className="border-white/10 text-white">Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setDeleteConfirmId(null)} className="border-border text-foreground">Cancel</Button>
             <Button type="button" onClick={() => handleDelete(deleteConfirmId!)} className="bg-red-500 hover:bg-red-600 text-white">Delete</Button>
           </DialogFooter>
         </DialogContent>
@@ -233,17 +233,17 @@ export function TeacherHomeworkPage() {
       {loading ? (
         <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" /></div>
       ) : homeworks.length === 0 ? (
-        <div className="text-center py-12 bg-slate-900/50 rounded-xl border border-white/10">
-          <BookOpen className="w-12 h-12 text-slate-500 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-bold text-white mb-1">No assignments created</h3>
-          <p className="text-slate-400 text-sm">Assign homework to your students and track their progress.</p>
+        <div className="text-center py-12 bg-card rounded-xl border border-border">
+          <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-bold text-foreground mb-1">No assignments created</h3>
+          <p className="text-muted-foreground text-sm">Assign homework to your students and track their progress.</p>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence>
             {homeworks.map((hw, idx) => (
               <motion.div key={hw.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
-                <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl hover:border-blue-500/30 transition-all group overflow-hidden flex flex-col h-full relative">
+                <Card className="bg-card backdrop-blur-xl border-border shadow-xl hover:border-blue-500/30 transition-all group overflow-hidden flex flex-col h-full relative">
                   <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-blue-500/20 to-transparent rounded-bl-full" />
                   <CardContent className="p-6 relative z-10 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-2">
@@ -252,20 +252,20 @@ export function TeacherHomeworkPage() {
                       </span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(hw)} title="Edit"
-                          className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => setDeleteConfirmId(hw.id)} title="Delete"
-                          className="p-1 rounded hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors">
+                          className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
-                    <span className="text-xs text-slate-400 font-mono mb-2">Due: {formatDate(hw.due_date)}</span>
-                    <h3 className="text-lg font-bold text-white mb-2">{hw.title}</h3>
-                    <p className="text-sm text-slate-400 mb-6 line-clamp-3 flex-grow">{hw.description}</p>
-                    <div className="flex justify-between items-center mt-auto pt-4 border-t border-white/5">
-                      <div className="text-xs text-slate-500">Class {hw.classes?.grade_level} {hw.classes?.section}</div>
+                    <span className="text-xs text-muted-foreground font-mono mb-2">Due: {formatDate(hw.due_date)}</span>
+                    <h3 className="text-lg font-bold text-foreground mb-2">{hw.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-6 line-clamp-3 flex-grow">{hw.description}</p>
+                    <div className="flex justify-between items-center mt-auto pt-4 border-t border-border">
+                      <div className="text-xs text-muted-foreground">Class {hw.classes?.grade_level} {hw.classes?.section}</div>
                       <Button variant="ghost" size="sm"
                         onClick={() => navigate(`/${tenantId}/teacher/submissions?homeworkId=${hw.id}`)}
                         className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 h-8 text-xs">

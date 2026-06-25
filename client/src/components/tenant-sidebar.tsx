@@ -243,7 +243,7 @@ export function TenantSidebar() {
       <div className="px-5 py-4 border-b border-border/60 sticky top-0 bg-sidebar z-10">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 flex items-center justify-center shadow-lg">
-            <span className="text-white text-xs font-black">E</span>
+            <span className="text-foreground text-xs font-black">E</span>
           </div>
           <div>
             <h2 className="text-sm font-black tracking-tight text-foreground leading-none">EduNextGen</h2>
