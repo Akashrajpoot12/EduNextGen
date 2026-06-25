@@ -41,18 +41,18 @@ export function AccountSettingsPage() {
       setDisplayName(`${data?.first_name || ""} ${data?.last_name || ""}`.trim() || user.email);
     } else if (role === "teacher") {
       const { data } = await supabase
-        .from("teachers")
+        .from("users")
         .select("id, full_name, phone, subject, avatar_url, joining_date")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .maybeSingle();
       setProfileRow(data);
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
       setDisplayName(data?.full_name || user.email);
     } else if (role === "parent") {
       const { data } = await supabase
-        .from("parents")
+        .from("users")
         .select("id, full_name, phone, avatar_url")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .maybeSingle();
       setProfileRow(data);
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
@@ -88,9 +88,10 @@ export function AccountSettingsPage() {
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
       setAvatarUrl(publicUrl);
 
-      // Update the role-specific table
-      const table = role === "student" ? "students" : role === "teacher" ? "teachers" : role === "parent" ? "parents" : "users";
-      const idCol = (role === "admin" || role === "staff") ? "id" : "user_id";
+      // Update the profile row. Students live in `students` (keyed by user_id);
+      // everyone else (teacher/parent/admin/staff) lives in `users` (keyed by id).
+      const table = role === "student" ? "students" : "users";
+      const idCol = role === "student" ? "user_id" : "id";
       await supabase.from(table).update({ avatar_url: publicUrl }).eq(idCol, authUser.id);
 
       toast.success("Profile photo updated!");

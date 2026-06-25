@@ -23,11 +23,11 @@ export function ParentSidebar({ tenant }: { tenant: string }) {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      // Try parents table first
+      // Parent profile lives in the users table (id == auth uid)
       const { data } = await supabase
-        .from("parents")
+        .from("users")
         .select("full_name, phone, avatar_url")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .maybeSingle();
       if (data?.full_name) {
         setParentName(data.full_name);

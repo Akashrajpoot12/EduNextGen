@@ -236,7 +236,7 @@ export function AdminDashboard() {
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
       const { data: results } = await supabase
-        .from("exam_results")
+        .from("exam_marks")
         .select("student_id, marks_obtained, max_marks")
         .eq("school_id", schoolId)
         .gte("created_at", `${monthStart}T00:00:00`)
@@ -312,7 +312,7 @@ export function AdminDashboard() {
           .gte("applied_at", `${ago7Days}T00:00:00`),
         // Staff on leave today (try teacher_leaves first)
         supabase
-          .from("teacher_leaves")
+          .from("leave_applications")
           .select("id", { count: "exact", head: true })
           .eq("school_id", schoolId)
           .eq("status", "approved")
