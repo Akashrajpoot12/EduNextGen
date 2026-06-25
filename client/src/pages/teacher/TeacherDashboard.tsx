@@ -79,11 +79,11 @@ export function TeacherDashboard() {
         setTeacherId(user.id);
 
         const { data: profile } = await supabase
-          .from("teachers")
-          .select("full_name, class_id")
-          .eq("user_id", user.id)
+          .from("users")
+          .select("full_name")
+          .eq("id", user.id)
           .maybeSingle();
-        const teacherClassId: string | null = profile?.class_id ?? null;
+        const teacherClassId: string | null = (profile as any)?.class_id ?? null;
 
         if (!profile?.full_name) {
           const { data: ur } = await supabase.from("users").select("name, full_name").eq("id", user.id).single();
@@ -187,8 +187,8 @@ export function TeacherDashboard() {
 
         // Performance drop detection (compare last 2 exams per student)
         const { data: examResults } = await supabase
-          .from("exam_results")
-          .select("student_id, marks_obtained, max_marks, subject, exam_id, class_id, students:student_id(first_name, last_name)")
+          .from("exam_marks")
+          .select("student_id, marks_obtained, max_marks, subject, exam_id, students:student_id(first_name, last_name)")
           .eq("school_id", schoolId)
           .order("exam_id", { ascending: false })
           .limit(500);
@@ -274,7 +274,7 @@ export function TeacherDashboard() {
                 .gte("date", monthStart)
                 .lte("date", monthEnd),
               supabase
-                .from("exam_results")
+                .from("exam_marks")
                 .select("student_id, marks_obtained, max_marks")
                 .eq("school_id", schoolId)
                 .in("student_id", studentIds)

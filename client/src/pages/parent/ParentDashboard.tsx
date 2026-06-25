@@ -151,7 +151,7 @@ export function ParentDashboard() {
         {
           event: "INSERT",
           schema: "public",
-          table: "exam_results",
+          table: "exam_marks",
           filter: `student_id=eq.${childId}`,
         },
         (payload: any) => {
@@ -435,14 +435,14 @@ export function ParentDashboard() {
     if (!selectedChild || !schoolId || !leaveFrom || !leaveTo || !leaveReason.trim()) return;
     setLeaveSubmitting(true);
     try {
-      const { error } = await supabase.from("student_leaves").insert({
+      const { error } = await supabase.from("leave_requests").insert({
         student_id: selectedChild.id,
         school_id: schoolId,
+        class_id: selectedChild.class_id,
         from_date: leaveFrom,
         to_date: leaveTo,
         reason: leaveReason.trim(),
         status: "pending",
-        applied_by: "parent",
       });
       if (error) throw error;
       setLeaveToast({ ok: true, msg: "Leave applied successfully!" });

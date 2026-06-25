@@ -270,9 +270,9 @@ export function SuperAdminDashboard() {
     try {
       const [studRes, teachRes, classRes, ttRes] = await Promise.all([
         supabase.from("students").select("school_id"),
-        supabase.from("teachers").select("school_id"),
+        supabase.from("users").select("school_id").eq("role", "teacher"),
         supabase.from("classes").select("school_id"),
-        supabase.from("timetable").select("school_id"),
+        supabase.from("timetables").select("school_id"),
       ]);
 
       const hasStudents  = new Set((studRes.data  || []).map((r: any) => r.school_id));

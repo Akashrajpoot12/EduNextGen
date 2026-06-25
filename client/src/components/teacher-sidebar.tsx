@@ -39,9 +39,9 @@ export function TeacherSidebar({ tenant }: { tenant: string }) {
 
       // Load teacher profile
       const { data: teacher } = await supabaseClient
-        .from("teachers")
+        .from("users")
         .select("full_name, subject, avatar_url")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .maybeSingle();
       if (teacher?.full_name) {
         setTeacherName(teacher.full_name);
