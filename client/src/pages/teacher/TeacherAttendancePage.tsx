@@ -210,9 +210,9 @@ export function TeacherAttendancePage() {
 
   const fetchTopScorers = async (studentList: Student[]) => {
     if (studentList.length === 0) { setTopScorerRanks({}); return; }
-    const studentIds = studentList.map(s => s.user_id);
+    const studentIds = studentList.map(s => s.id);
     const { data: examData } = await supabase
-      .from("exam_results")
+      .from("exam_marks")
       .select("student_id, marks_obtained, max_marks")
       .in("student_id", studentIds)
       .eq("school_id", schoolId);
@@ -469,7 +469,7 @@ export function TeacherAttendancePage() {
                   const isAbsent = attendance[student.user_id] === "absent";
                   const fullName = student.users?.full_name
                     ?? `${student.first_name} ${student.last_name}`.trim();
-                  const rank = topScorerRanks[student.user_id];
+                  const rank = topScorerRanks[student.id];
                   const isTopScorer = rank !== undefined;
                   return (
                     <tr

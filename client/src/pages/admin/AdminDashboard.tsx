@@ -133,8 +133,8 @@ export function AdminDashboard() {
         supabase.from("exams").select("title, exam_date, class_id").eq("school_id", schoolId).gte("exam_date", today).lte("exam_date", in7Days).order("exam_date").limit(5),
         supabase.from("admission_applications").select("student_name, applying_for_class, applied_at, status").eq("school_id", schoolId).order("applied_at", { ascending: false }).limit(5),
         supabase.from("students").select("name, admission_number, created_at").eq("school_id", schoolId).order("created_at", { ascending: false }).limit(5),
-        // Birthdays: students
-        supabase.from("students").select("name, date_of_birth").eq("school_id", schoolId).not("date_of_birth", "is", null),
+        // Birthdays: students with a birthday TODAY (computed in DB, no 1000-row cap)
+        supabase.rpc("students_birthdays_today", { p_school: schoolId }),
         // Birthdays: teachers (via profiles joined through user_roles)
         supabase.from("user_roles").select("user_id, profiles(full_name, date_of_birth)").eq("school_id", schoolId).eq("role", "teacher"),
         // Today's fee payments
@@ -166,14 +166,10 @@ export function AdminDashboard() {
         recentStudents: (recentStudentsRes.data || []) as DashboardStats["recentStudents"],
       });
 
-      // Process birthdays
+      // Process birthdays — students already filtered to today by the RPC
       const bdayList: BirthdayPerson[] = [];
       for (const s of studentBirthdaysRes.data || []) {
-        if (!s.date_of_birth) continue;
-        const dob = new Date(s.date_of_birth);
-        const m = String(dob.getMonth() + 1).padStart(2, "0");
-        const d = String(dob.getDate()).padStart(2, "0");
-        if (m === todayMonth && d === todayDay) bdayList.push({ name: s.name, type: "student" });
+        bdayList.push({ name: s.name, type: "student" });
       }
       for (const tr of teacherBirthdaysRes.data || []) {
         const profile = (tr as any).profiles;

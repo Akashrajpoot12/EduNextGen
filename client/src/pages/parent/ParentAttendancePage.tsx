@@ -25,13 +25,13 @@ export function ParentAttendancePage() {
       // Try to find children linked to this parent via students.parent_user_id
       const { data: kids } = await supabase
         .from("students")
-        .select("user_id, enrollment_number, users:user_id(full_name), classes:class_id(grade_level, section)")
+        .select("id, user_id, enrollment_number, users:user_id(full_name), classes:class_id(grade_level, section)")
         .eq("school_id", schoolId)
         .eq("parent_user_id", user.id);
 
       if (kids && kids.length > 0) {
         setChildren(kids);
-        setSelectedChild(kids[0].user_id);
+        setSelectedChild(kids[0].id);
       }
       setLoading(false);
     })();
@@ -68,7 +68,7 @@ export function ParentAttendancePage() {
   records.forEach(r => { recordMap[r.date] = r.status; });
   const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-  const selectedChildData = children.find(c => c.user_id === selectedChild);
+  const selectedChildData = children.find(c => c.id === selectedChild);
 
   if (loading) return (
     <div className="flex justify-center py-12">
@@ -96,7 +96,7 @@ export function ParentAttendancePage() {
           <select value={selectedChild} onChange={e => setSelectedChild(e.target.value)}
             className="h-10 rounded-lg border border-border bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
             {children.map(c => (
-              <option key={c.user_id} value={c.user_id}>
+              <option key={c.id} value={c.id}>
                 {(c.users as any)?.full_name} — Class {(c.classes as any)?.grade_level}-{(c.classes as any)?.section}
               </option>
             ))}

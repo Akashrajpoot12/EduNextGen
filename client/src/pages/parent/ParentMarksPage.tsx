@@ -25,12 +25,12 @@ export function ParentMarksPage() {
       if (!user) return;
       const { data: kids } = await supabase
         .from("students")
-        .select("user_id, users:user_id(full_name), classes:class_id(grade_level, section)")
+        .select("id, user_id, users:user_id(full_name), classes:class_id(grade_level, section)")
         .eq("school_id", schoolId)
         .eq("parent_user_id", user.id);
       if (kids && kids.length > 0) {
         setChildren(kids);
-        setSelectedChild(kids[0].user_id);
+        setSelectedChild(kids[0].id);
       }
       setLoading(false);
     })();
@@ -68,7 +68,7 @@ export function ParentMarksPage() {
     fill: r.pct >= 75 ? "#10b981" : r.pct >= 50 ? "#f59e0b" : "#ef4444",
   }));
 
-  const selectedChildData = children.find(c => c.user_id === selectedChild);
+  const selectedChildData = children.find(c => c.id === selectedChild);
 
   if (loading) return (
     <div className="flex justify-center py-12">
@@ -95,7 +95,7 @@ export function ParentMarksPage() {
         <select value={selectedChild} onChange={e => setSelectedChild(e.target.value)}
           className="h-10 rounded-lg border border-border bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 w-72">
           {children.map(c => (
-            <option key={c.user_id} value={c.user_id}>
+            <option key={c.id} value={c.id}>
               {(c.users as any)?.full_name} — Class {(c.classes as any)?.grade_level}-{(c.classes as any)?.section}
             </option>
           ))}

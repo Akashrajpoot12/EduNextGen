@@ -87,7 +87,7 @@ export function ParentDashboard() {
       // Children — fetch name fields directly from students table, fallback chain
       const { data: kids } = await supabase
         .from("students")
-        .select("user_id, class_id, enrollment_number, first_name, last_name, name, classes:class_id(grade_level, section)")
+        .select("id, user_id, class_id, enrollment_number, first_name, last_name, name, classes:class_id(grade_level, section)")
         .eq("school_id", schoolId)
         .eq("parent_user_id", user.id);
 
@@ -136,7 +136,7 @@ export function ParentDashboard() {
   // Subscribe to realtime exam_results for the selected child
   useEffect(() => {
     if (!selectedChild) return;
-    const childId = selectedChild.user_id;
+    const childId = selectedChild.id;  // child tables key on students.id
     const childName = selectedChild.displayName;
 
     // Tear down previous channel
@@ -180,7 +180,7 @@ export function ParentDashboard() {
   }, [selectedChild]);
 
   async function loadChildStats(child: any) {
-    const childId = child.user_id;
+    const childId = child.id;  // child tables key on students.id
     const now = new Date();
     const today = now.toISOString().split("T")[0];
 
@@ -359,7 +359,7 @@ export function ParentDashboard() {
   }
 
   async function loadExamResults(child: any) {
-    const childId = child.user_id;
+    const childId = child.id;  // exam_marks keys on students.id
     const { data } = await supabase
       .from("exam_marks")
       .select("marks_obtained, exams:exam_id(subject, total_marks)")
