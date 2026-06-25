@@ -112,18 +112,18 @@ export function ClassesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Classes & Sections</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage grade levels, sections, and class teachers.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Classes & Sections</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage grade levels, sections, and class teachers.</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger render={<Button className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" />}>
               <Plus className="w-4 h-4 mr-2" /> Add Class
             </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[425px]">
+          <DialogContent className="bg-card border-border text-foreground sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Add New Class</DialogTitle>
-              <DialogDescription className="text-slate-400">
+              <DialogDescription className="text-muted-foreground">
                 Create a new class section and assign a class teacher.
               </DialogDescription>
             </DialogHeader>
@@ -136,7 +136,7 @@ export function ClassesPage() {
                   value={gradeLevel}
                   onChange={(e) => setGradeLevel(e.target.value)}
                   required
-                  className="bg-slate-950 border-white/10 text-white"
+                  className="bg-background border-border text-foreground"
                 />
               </div>
               <div className="space-y-2">
@@ -147,16 +147,16 @@ export function ClassesPage() {
                   value={section}
                   onChange={(e) => setSection(e.target.value)}
                   required
-                  className="bg-slate-950 border-white/10 text-white"
+                  className="bg-background border-border text-foreground"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="teacher">Class Teacher</Label>
                 <Select value={teacherId} onValueChange={setTeacherId}>
-                  <SelectTrigger className="bg-slate-950 border-white/10 text-white">
+                  <SelectTrigger className="bg-background border-border text-foreground">
                     <SelectValue placeholder="Select a teacher" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-white/10 text-white">
+                  <SelectContent className="bg-card border-border text-foreground">
                     <SelectItem value="unassigned">Unassigned</SelectItem>
                     {teachers.map((t: any) => (
                       <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
@@ -180,14 +180,14 @@ export function ClassesPage() {
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
         </div>
       ) : classes.length === 0 ? (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-              <CalendarDays className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <CalendarDays className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No classes found</h3>
-            <p className="text-slate-400 mb-6 max-w-sm">You haven't created any classes yet. Click the button above to add your first class.</p>
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-white/10 hover:bg-white/20 text-white border-0">
+            <h3 className="text-xl font-bold text-foreground mb-2">No classes found</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm">You haven't created any classes yet. Click the button above to add your first class.</p>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-white/10 hover:bg-white/20 text-foreground border-0">
               Create First Class
             </Button>
           </CardContent>
@@ -202,12 +202,12 @@ export function ClassesPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
+                <Card className="bg-card backdrop-blur-xl border-border shadow-xl overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <CardHeader className="pb-2 border-b border-white/5 relative z-10">
+                  <CardHeader className="pb-2 border-b border-border relative z-10">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+                        <CardTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                           {cls.grade_level} 
                           <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs tracking-widest font-mono">
                             SEC {cls.section}
@@ -217,20 +217,20 @@ export function ClassesPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-4 relative z-10">
-                    <div className="flex items-center gap-3 text-sm text-slate-400">
-                      <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-white/10">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border border-border">
                         <GraduationCap className="w-4 h-4 text-emerald-400" />
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Class Teacher</p>
-                        <p className="text-slate-200 font-medium">
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Class Teacher</p>
+                        <p className="text-foreground font-medium">
                           {cls.users ? cls.users.full_name : "Unassigned"}
                         </p>
                       </div>
                     </div>
                     
-                    <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Users className="w-4 h-4" />
                         <span>0 Students</span>
                       </div>

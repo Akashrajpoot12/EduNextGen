@@ -105,7 +105,7 @@ export function ParentLeavePage() {
           <p className="text-sm text-muted-foreground mt-1">Apply and track leave for your child</p>
         </div>
         <button type="button" onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors">
+          className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-foreground rounded-lg text-sm font-medium transition-colors">
           {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           {showForm ? "Cancel" : "Apply Leave"}
         </button>
@@ -165,7 +165,7 @@ export function ParentLeavePage() {
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none" />
           </div>
           <button type="submit" disabled={submitting}
-            className="w-full h-10 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-60">
+            className="w-full h-10 bg-amber-500 hover:bg-amber-600 text-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-60">
             {submitting ? "Submitting..." : "Submit Leave Request"}
           </button>
         </form>

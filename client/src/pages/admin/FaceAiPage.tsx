@@ -260,17 +260,17 @@ export function FaceAiPage() {
         <Card className="lg:col-span-2 bg-card border-border shadow-xl overflow-hidden">
           <CardContent className="p-0 aspect-video relative flex flex-col items-center justify-center bg-black/90">
             {!modelsLoaded ? (
-              <div className="text-center text-slate-400">
+              <div className="text-center text-muted-foreground">
                 <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-emerald-500" />
                 <p>Loading AI Neural Networks...</p>
                 <p className="text-xs opacity-50 mt-2">(~2–3 MB from GitHub)</p>
               </div>
             ) : !isCameraActive ? (
               <div className="text-center">
-                <Camera className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                <Camera className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 {cameraError
                   ? <p className="text-red-400 mb-4">{cameraError}</p>
-                  : <p className="text-slate-400 mb-6">Camera is inactive</p>}
+                  : <p className="text-muted-foreground mb-6">Camera is inactive</p>}
                 <Button onClick={startCamera} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Play className="w-5 h-5 mr-2" /> Enable Camera
                 </Button>
@@ -281,7 +281,7 @@ export function FaceAiPage() {
                 <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full object-cover z-10" />
                 <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-xs text-white font-mono bg-black/50 px-2 py-1 rounded border border-white/10">LIVE</span>
+                  <span className="text-xs text-foreground font-mono bg-black/50 px-2 py-1 rounded border border-border">LIVE</span>
                 </div>
                 <div className="absolute bottom-4 right-4 z-20">
                   <Button variant="destructive" size="sm" onClick={stopCamera}>Turn Off</Button>

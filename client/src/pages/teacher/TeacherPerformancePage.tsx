@@ -154,7 +154,7 @@ export function TeacherPerformancePage() {
                 <div className="space-y-3">
                   {toppers.map((s, i) => (
                     <div key={s.name} className="flex items-center gap-3">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${i === 0 ? "bg-amber-500/20 text-amber-600" : i === 1 ? "bg-slate-400/20 text-slate-500" : i === 2 ? "bg-orange-400/20 text-orange-600" : "bg-muted text-muted-foreground"}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${i === 0 ? "bg-amber-500/20 text-amber-600" : i === 1 ? "bg-slate-400/20 text-muted-foreground" : i === 2 ? "bg-orange-400/20 text-orange-600" : "bg-muted text-muted-foreground"}`}>
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">

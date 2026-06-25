@@ -99,7 +99,7 @@ export function SuperAdminLoginForm() {
             {isLoading ? "Authenticating..." : "Authorize"}
           </Button>
           {import.meta.env.DEV && (
-          <div className="text-sm text-center text-slate-500 w-full mt-2">
+          <div className="text-sm text-center text-muted-foreground w-full mt-2">
             Local Demo Setup? <br/>
             <button
               type="button"

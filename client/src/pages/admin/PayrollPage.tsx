@@ -102,18 +102,18 @@ export function PayrollPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Payroll Management</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage staff salaries and generate monthly payrolls.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Payroll Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage staff salaries and generate monthly payrolls.</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger render={<Button className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" />}>
               <Plus className="w-4 h-4 mr-2" /> Define Staff Salary
             </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-white/10 text-white sm:max-w-[425px]">
+          <DialogContent className="bg-card border-border text-foreground sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Define Base Salary</DialogTitle>
-              <DialogDescription className="text-slate-400">
+              <DialogDescription className="text-muted-foreground">
                 Set the base monthly salary for a teacher or staff member.
               </DialogDescription>
             </DialogHeader>
@@ -121,7 +121,7 @@ export function PayrollPage() {
               <div className="space-y-2">
                 <Label>Select Staff Member</Label>
                 <select 
-                  className="w-full h-10 px-3 py-2 bg-slate-950 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full h-10 px-3 py-2 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   value={selectedTeacherId}
                   onChange={(e) => setSelectedTeacherId(e.target.value)}
                   required
@@ -144,7 +144,7 @@ export function PayrollPage() {
                   onChange={(e) => setBaseSalary(e.target.value)} 
                   placeholder="25000"
                   required 
-                  className="bg-slate-950 border-white/10 text-white" 
+                  className="bg-background border-border text-foreground" 
                 />
               </div>
               <DialogFooter className="pt-4">
@@ -159,12 +159,12 @@ export function PayrollPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl">
           <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-slate-400">Monthly Payroll Estimate</p>
-                <h3 className="text-3xl font-bold text-white mt-2 flex items-center">
+                <p className="text-sm font-medium text-muted-foreground">Monthly Payroll Estimate</p>
+                <h3 className="text-3xl font-bold text-foreground mt-2 flex items-center">
                   <IndianRupee className="w-6 h-6 mr-1" /> 
                   {salaries.reduce((sum, s) => sum + Number(s.base_salary), 0).toLocaleString()}
                 </h3>
@@ -182,20 +182,20 @@ export function PayrollPage() {
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500/50" />
         </div>
       ) : salaries.length === 0 ? (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 border border-white/5">
-              <Wallet className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 border border-border">
+              <Wallet className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No salaries defined</h3>
-            <p className="text-slate-400 mb-6 max-w-sm">You haven't set up the payroll structure for any staff members yet.</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">No salaries defined</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm">You haven't set up the payroll structure for any staff members yet.</p>
           </CardContent>
         </Card>
       ) : (
-        <Card className="bg-slate-900/50 backdrop-blur-xl border-white/10 shadow-xl overflow-hidden">
+        <Card className="bg-card backdrop-blur-xl border-border shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-slate-300">
-              <thead className="text-xs uppercase bg-slate-950/80 text-slate-400 border-b border-white/5">
+            <table className="w-full text-sm text-left text-muted-foreground">
+              <thead className="text-xs uppercase bg-muted text-muted-foreground border-b border-border">
                 <tr>
                   <th className="px-6 py-4">Staff Name</th>
                   <th className="px-6 py-4">Email</th>
@@ -210,10 +210,10 @@ export function PayrollPage() {
                       key={salary.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                      className="border-b border-border hover:bg-muted/50 transition-colors"
                     >
-                      <td className="px-6 py-4 font-medium text-white">{salary.users?.full_name}</td>
-                      <td className="px-6 py-4 text-slate-400">{salary.users?.email}</td>
+                      <td className="px-6 py-4 font-medium text-foreground">{salary.users?.full_name}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{salary.users?.email}</td>
                       <td className="px-6 py-4 font-mono text-emerald-400 flex items-center">
                         <IndianRupee className="w-3 h-3 mr-1" /> {Number(salary.base_salary).toLocaleString()}
                       </td>
@@ -248,9 +248,9 @@ export function PayrollPage() {
               <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b">
                 <div>
                   <h2 className="font-bold text-lg">{schoolName || "School"}</h2>
-                  <p className="text-xs text-slate-500">Salary Slip — {monthName}</p>
+                  <p className="text-xs text-muted-foreground">Salary Slip — {monthName}</p>
                 </div>
-                <button type="button" title="Close" onClick={() => setPrintSalary(null)} className="text-slate-400 hover:text-slate-600">
+                <button type="button" title="Close" onClick={() => setPrintSalary(null)} className="text-muted-foreground hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -258,14 +258,14 @@ export function PayrollPage() {
               <div className="px-6 py-4 space-y-4">
                 {/* Employee details */}
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div><span className="text-slate-500">Name:</span> <span className="font-medium">{printSalary.users?.full_name}</span></div>
-                  <div><span className="text-slate-500">Email:</span> <span className="font-medium">{printSalary.users?.email}</span></div>
-                  <div><span className="text-slate-500">Pay Period:</span> <span className="font-medium">{monthName}</span></div>
+                  <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{printSalary.users?.full_name}</span></div>
+                  <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{printSalary.users?.email}</span></div>
+                  <div><span className="text-muted-foreground">Pay Period:</span> <span className="font-medium">{monthName}</span></div>
                 </div>
 
                 {/* Month picker */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">Change month:</span>
+                  <span className="text-xs text-muted-foreground">Change month:</span>
                   <input type="month" value={payMonth} onChange={e => setPayMonth(e.target.value)}
                     title="Pay month" placeholder="YYYY-MM"
                     className="text-xs border border-slate-200 rounded px-2 py-1" />
@@ -314,7 +314,7 @@ export function PayrollPage() {
 
               <div className="px-6 pb-5 flex justify-end">
                 <button type="button" onClick={() => window.print()}
-                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+                  className="flex items-center gap-2 bg-muted hover:bg-muted text-foreground text-sm font-medium px-5 py-2 rounded-lg transition-colors">
                   <Printer className="w-4 h-4" /> Print / Save PDF
                 </button>
               </div>

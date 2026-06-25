@@ -320,10 +320,10 @@ export function LibraryPage() {
             </div>
 
             {/* Camera preview */}
-            <div className="relative bg-slate-950 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+            <div className="relative bg-background rounded-xl overflow-hidden aspect-video flex items-center justify-center">
               <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${scanActive ? "block" : "hidden"}`} />
               {!scanActive && (
-                <div className="flex flex-col items-center gap-2 text-slate-400">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Camera className="w-10 h-10 opacity-40" />
                   <p className="text-xs">Camera inactive</p>
                 </div>
@@ -360,7 +360,7 @@ export function LibraryPage() {
                   if (data) { setScannedBook(data); toast.success(`Book: ${data.title}`); }
                   else toast.error("No book found with this ISBN");
                 }}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors">
+                className="px-4 py-2 bg-muted hover:bg-slate-600 text-foreground rounded-lg text-sm transition-colors">
                 Lookup
               </button>
             </div>

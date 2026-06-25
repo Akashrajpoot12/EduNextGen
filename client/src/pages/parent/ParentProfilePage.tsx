@@ -54,7 +54,7 @@ export function ParentProfilePage() {
 
       {/* Avatar */}
       <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-2xl font-bold text-foreground shadow-lg">
           {initials}
         </div>
         <div>

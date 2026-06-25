@@ -132,7 +132,7 @@ export function ProtectedRoute({ children, allowedRoles, isSuperAdminRoute = fal
       <div className="flex min-h-screen items-center justify-center bg-zinc-950">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-slate-400 text-sm font-medium">Checking authorization...</p>
+          <p className="text-muted-foreground text-sm font-medium">Checking authorization...</p>
         </div>
       </div>
     );

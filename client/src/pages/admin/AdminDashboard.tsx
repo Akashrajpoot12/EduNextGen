@@ -628,7 +628,7 @@ export function AdminDashboard() {
                 type="button"
                 onClick={handleSendWhatsApp}
                 disabled={sendingWhatsApp || stats.todayAbsent === 0}
-                className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity disabled:opacity-50 bg-[#25D366] text-white"
+                className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity disabled:opacity-50 bg-[#25D366] text-foreground"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
                 {sendingWhatsApp ? "Sending…" : "Send WhatsApp to Parents"}
@@ -829,7 +829,7 @@ export function AdminDashboard() {
                 type="button"
                 onClick={handleSendBusAlert}
                 disabled={sendingBusAlert || !busMessage.trim()}
-                className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-opacity disabled:opacity-50 bg-[#25D366] text-white"
+                className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-opacity disabled:opacity-50 bg-[#25D366] text-foreground"
               >
                 <MessageCircle className="w-4 h-4" />
                 {sendingBusAlert ? "Sending…" : "Send WhatsApp Alert to All Parents"}
@@ -890,7 +890,7 @@ export function AdminDashboard() {
                 type="button"
                 onClick={handleAnnounceTopper}
                 disabled={announcingTopper}
-                className="flex-shrink-0 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-colors disabled:opacity-50"
+                className="flex-shrink-0 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-amber-500 text-foreground hover:bg-amber-600 transition-colors disabled:opacity-50"
               >
                 {announcingTopper ? "Announcing…" : "📢 Announce to School"}
               </button>
