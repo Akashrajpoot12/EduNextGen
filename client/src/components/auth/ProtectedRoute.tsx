@@ -20,9 +20,6 @@ export function ProtectedRoute({ children, allowedRoles, isSuperAdminRoute = fal
   const [hasAccess, setHasAccess] = useState(false);
   const [resolvedRole, setResolvedRole] = useState<string | null>(null);
 
-  // If this is a tenant-scoped route, we can consume the TenantContext
-  const tenantContext = isSuperAdminRoute ? null : useTenant();
-
   useEffect(() => {
     let isMounted = true;
 

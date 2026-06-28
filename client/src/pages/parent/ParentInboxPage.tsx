@@ -30,19 +30,35 @@ export function ParentInboxPage() {
         .single();
 
       if (!school) return;
+      const { data: { user } } = await supabase.auth.getUser();
 
-      // In a real app, we filter by recipient_type = 'Parents' OR specific user_id if direct message
-      const { data } = await supabase
-        .from('communications')
-        .select(`
-          id, subject, body, message_type, created_at,
-          sender:sender_id(full_name)
-        `)
-        .eq('school_id', school.id)
-        .in('recipient_type', ['Parents', 'All_Students'])
-        .order('created_at', { ascending: false });
+      // Merge school broadcasts (communications) + direct teacher→parent messages.
+      const [bcastRes, dmRes] = await Promise.all([
+        supabase.from('communications')
+          .select(`id, subject, body, message_type, created_at`)
+          .eq('school_id', school.id)
+          .in('recipient_type', ['Parents', 'All_Students'])
+          .order('created_at', { ascending: false }),
+        user
+          ? supabase.from('teacher_parent_messages')
+              .select(`id, message, sender_name, created_at`)
+              .eq('school_id', school.id)
+              .eq('parent_id', user.id)
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
 
-      if (data) setMessages(data);
+      const broadcasts = (bcastRes.data || []).map((m: any) => ({
+        id: 'c_' + m.id, subject: m.subject, body: m.body,
+        message_type: m.message_type || 'notice', created_at: m.created_at,
+        senderName: 'Administration',
+      }));
+      const dms = (dmRes.data || []).map((m: any) => ({
+        id: 'm_' + m.id, subject: "Message from teacher", body: m.message,
+        message_type: 'message', created_at: m.created_at,
+        senderName: m.sender_name || 'Teacher',
+      }));
+      setMessages([...broadcasts, ...dms].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')));
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
@@ -113,7 +129,7 @@ export function ParentInboxPage() {
                       </p>
                       
                       <div className="flex items-center text-xs text-muted-foreground">
-                        <span>From: <span className="text-muted-foreground">{msg.sender?.full_name || 'Administration'}</span></span>
+                        <span>From: <span className="text-muted-foreground">{msg.senderName}</span></span>
                         <span className="mx-2">•</span>
                         <span className="uppercase">{msg.message_type}</span>
                       </div>

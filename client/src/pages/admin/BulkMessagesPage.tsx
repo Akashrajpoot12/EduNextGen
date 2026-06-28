@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
-import { MessageSquare, Phone, Copy, ExternalLink, CheckCircle } from "lucide-react";
+import { Phone, Copy, ExternalLink, CheckCircle, Send, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 type Student = { id: string; name: string; father_name: string; phone: string; class_id: string; classes?: { name: string } | null };
 
@@ -28,6 +29,7 @@ export function BulkMessagesPage() {
   const [messageMode, setMessageMode] = useState<"whatsapp" | "sms">("whatsapp");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showLinks, setShowLinks] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -52,7 +54,7 @@ export function BulkMessagesPage() {
   const msg = customMsg || template;
 
   function buildMessage(s: Student) {
-    return msg.replace("{name}", s.name).replace("{school}", schoolName).replace(/\{[^}]+\}/g, "___");
+    return msg.replaceAll("{name}", s.name).replaceAll("{school}", schoolName).replace(/\{[^}]+\}/g, "___");
   }
 
   function waLink(s: Student) {
@@ -65,9 +67,39 @@ export function BulkMessagesPage() {
     const lines = filtered.filter(s => selectedIds.has(s.id) && s.phone)
       .map(s => `${s.name} (${s.phone}): ${buildMessage(s)}`).join("\n\n");
     await navigator.clipboard.writeText(lines);
+    toast.success("Messages copied to clipboard");
   }
 
   const selectedStudents = filtered.filter(s => selectedIds.has(s.id) && s.phone);
+
+  async function sendViaApi(channel: "sms" | "whatsapp") {
+    if (selectedStudents.length === 0) return;
+    setSending(true);
+    const toastId = toast.loading(`Sending ${selectedStudents.length} ${channel.toUpperCase()} messages...`);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const items = selectedStudents.map(s => ({ mobile: s.phone, message: buildMessage(s) }));
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ type: "custom", schoolId, data: { channel, items } }),
+        }
+      );
+      if (!res.ok) throw new Error("Messaging service error");
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast.success(`${channel.toUpperCase()}: ${result.sent ?? 0} sent, ${result.failed ?? 0} failed`, { id: toastId });
+    } catch (err: any) {
+      toast.error("Failed: " + err.message, { id: toastId });
+    }
+    setSending(false);
+  }
 
   return (
     <div>
@@ -173,9 +205,14 @@ export function BulkMessagesPage() {
           <div className="flex gap-3">
             {messageMode === "whatsapp" ? (
               <>
-                <button type="button" onClick={() => setShowLinks(!showLinks)} disabled={selectedStudents.length === 0}
+                <button type="button" onClick={() => sendViaApi("whatsapp")} disabled={selectedStudents.length === 0 || sending}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-                  <ExternalLink className="w-4 h-4" /> Open {selectedStudents.length} WhatsApp Links
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Send {selectedStudents.length} WhatsApp
+                </button>
+                <button type="button" onClick={() => setShowLinks(!showLinks)} disabled={selectedStudents.length === 0}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted disabled:opacity-50">
+                  <ExternalLink className="w-4 h-4" /> {showLinks ? "Hide" : "Show"} Links
                 </button>
                 <button type="button" onClick={copyAll} disabled={selectedStudents.length === 0}
                   className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted disabled:opacity-50">
@@ -183,14 +220,17 @@ export function BulkMessagesPage() {
                 </button>
               </>
             ) : (
-              <div className="flex-1 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-                <p className="font-semibold mb-1">SMS via API (MSG91 / Fast2SMS)</p>
-                <p className="text-xs mb-2">Configure your SMS API key in School Settings to send bulk SMS directly from here.</p>
-                <button type="button" onClick={copyAll} disabled={selectedStudents.length === 0}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 disabled:opacity-50">
-                  <Copy className="w-3.5 h-3.5" /> Copy {selectedStudents.length} Messages for Manual Send
+              <>
+                <button type="button" onClick={() => sendViaApi("sms")} disabled={selectedStudents.length === 0 || sending}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Send {selectedStudents.length} SMS
                 </button>
-              </div>
+                <button type="button" onClick={copyAll} disabled={selectedStudents.length === 0}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted disabled:opacity-50">
+                  <Copy className="w-4 h-4" /> Copy All
+                </button>
+              </>
             )}
           </div>
 

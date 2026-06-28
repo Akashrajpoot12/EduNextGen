@@ -13,10 +13,10 @@ type Announcement = {
 };
 
 const typeStyles = {
-  info:    "bg-blue-500/10 border-blue-500/30 text-blue-300",
-  warning: "bg-yellow-500/10 border-yellow-500/30 text-yellow-300",
-  success: "bg-emerald-500/10 border-emerald-500/30 text-emerald-300",
-  urgent:  "bg-red-500/10 border-red-500/30 text-red-300",
+  info:    "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300",
+  warning: "bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300",
+  success: "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+  urgent:  "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300",
 };
 
 const typeIcons = { info: "ℹ️", warning: "⚠️", success: "✅", urgent: "🚨" };

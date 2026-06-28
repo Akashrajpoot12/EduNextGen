@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Plus, Search, Printer, X, Save } from "lucide-react";
@@ -104,7 +105,7 @@ export function ExamsPage() {
   async function loadMarks() {
     if (!selExam || !selClass) return;
     const supabase = createClient();
-    const { data } = await supabase.from("marks").select("*").eq("school_id", schoolId).eq("exam_id", selExam).in("student_id", classStudents.map(s => s.id));
+    const { data } = await supabase.from("exam_marks").select("*").eq("school_id", schoolId).eq("exam_id", selExam).in("student_id", classStudents.map(s => s.id));
     const m: Record<string, Mark> = {};
     const mx: Record<string, number> = {};
     (data || []).forEach((row: Mark & { exam_id: string }) => {
@@ -140,16 +141,16 @@ export function ExamsPage() {
       class_id: selClass,
     }));
     if (upserts.length > 0) {
-      await supabase.from("marks").upsert(upserts, { onConflict: "school_id,student_id,exam_id,subject" });
+      await supabase.from("exam_marks").upsert(upserts, { onConflict: "exam_id,student_id,subject" });
     }
     setSaving(false);
-    alert("Marks saved successfully!");
+    toast.success("Marks saved successfully!");
   }
 
   async function loadReport() {
     if (!reportStudent || !reportExam) return;
     const supabase = createClient();
-    const { data } = await supabase.from("marks").select("*").eq("school_id", schoolId).eq("student_id", reportStudent).eq("exam_id", reportExam);
+    const { data } = await supabase.from("exam_marks").select("*").eq("school_id", schoolId).eq("student_id", reportStudent).eq("exam_id", reportExam);
     setReportMarks(data || []);
   }
 
@@ -160,7 +161,7 @@ export function ExamsPage() {
     setBulkLoading(true);
     const supabase = createClient();
     const classStuds = students.filter(s => s.class_id === bulkClass);
-    const { data } = await supabase.from("marks").select("*").eq("school_id", schoolId).eq("exam_id", bulkExam).in("student_id", classStuds.map(s => s.id));
+    const { data } = await supabase.from("exam_marks").select("*").eq("school_id", schoolId).eq("exam_id", bulkExam).in("student_id", classStuds.map(s => s.id));
     const grouped: Record<string, Mark[]> = {};
     classStuds.forEach(s => { grouped[s.id] = []; });
     (data || []).forEach((m: Mark) => { if (grouped[m.student_id]) grouped[m.student_id].push(m); });

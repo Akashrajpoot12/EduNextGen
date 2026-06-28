@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { useNavigate, useParams } from "react-router-dom";
@@ -109,7 +110,8 @@ export function TeacherHomeworkPage() {
           school_id: schoolId,
           title: `📚 New Homework: ${subject} — ${title}`,
           content: `${clsLabel}: New homework assigned — "${title}" for ${subject}. Due date: ${dueDate}. ${description || ""}`.trim(),
-          audience: "students",
+          target_audience: "students",
+          notice_type: "announcement",
           priority: "normal",
         });
       }
@@ -117,7 +119,7 @@ export function TeacherHomeworkPage() {
       setIsDialogOpen(false);
       fetchHomeworks(schoolId);
     } catch (error: any) {
-      alert(`Failed: ${error.message}`);
+      toast.error(`Failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +132,7 @@ export function TeacherHomeworkPage() {
       setDeleteConfirmId(null);
       fetchHomeworks(schoolId);
     } catch (error: any) {
-      alert(`Failed to delete: ${error.message}`);
+      toast.error(`Failed to delete: ${error.message}`);
     }
   }
 

@@ -23,7 +23,8 @@ serve(async (req) => {
   // Security: only allow internal calls
   const authHeader = req.headers.get("Authorization");
   const cronSecret = Deno.env.get("CRON_SECRET");
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // Fail closed: require CRON_SECRET to be configured AND matched.
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
   }
 

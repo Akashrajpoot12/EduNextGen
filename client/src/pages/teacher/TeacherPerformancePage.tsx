@@ -46,7 +46,7 @@ export function TeacherPerformancePage() {
     // Single batch query — replaces N+1 per-exam queries
     const { data: allMarks } = await supabase
       .from("exam_marks")
-      .select("exam_id, marks_obtained, students:student_id(users:user_id(full_name))")
+      .select("exam_id, marks_obtained, students:student_id(name)")
       .in("exam_id", examIds);
 
     const marksByExam: Record<string, number[]> = {};
@@ -85,7 +85,7 @@ export function TeacherPerformancePage() {
 
     const studentMap: Record<string, { name: string; total: number; max: number }> = {};
     (allMarks || []).forEach((m: any) => {
-      const name = m.students?.users?.full_name || "—";
+      const name = m.students?.name || "—";
       if (!studentMap[name]) studentMap[name] = { name, total: 0, max: 0 };
       studentMap[name].total += m.marks_obtained;
       studentMap[name].max += examTotalMap[m.exam_id] || 100;

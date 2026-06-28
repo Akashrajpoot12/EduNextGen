@@ -13,6 +13,7 @@ type AttendanceRecord = {
   user_id: string;
   status: "present" | "absent" | "late" | "half_day";
   notes: string;
+  method?: string;
 };
 
 const STATUS_OPTIONS = [
@@ -51,14 +52,14 @@ export function StaffAttendancePage() {
   async function fetchAttendanceForDate(d: string) {
     const { data } = await supabase
       .from("staff_attendance")
-      .select("user_id, status, notes")
+      .select("user_id, status, notes, method")
       .eq("school_id", schoolId)
       .eq("date", d);
 
     const map: Record<string, AttendanceRecord> = {};
     if (data) {
       data.forEach((r) => {
-        map[r.user_id] = { user_id: r.user_id, status: r.status as AttendanceRecord["status"], notes: r.notes || "" };
+        map[r.user_id] = { user_id: r.user_id, status: r.status as AttendanceRecord["status"], notes: r.notes || "", method: (r as any).method };
       });
     }
     setAttendance(map);
@@ -241,7 +242,14 @@ export function StaffAttendancePage() {
                   const u = s.users as { full_name: string; email: string } | null;
                   return (
                     <tr key={s.user_id}>
-                      <td className="font-medium">{u?.full_name || "Unknown"}</td>
+                      <td className="font-medium">
+                        {u?.full_name || "Unknown"}
+                        {rec?.method === "face_ai" && (
+                          <span className="ml-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 align-middle">
+                            📷 Face
+                          </span>
+                        )}
+                      </td>
                       <td><span className="badge-blue capitalize">{s.role.replace("_", " ")}</span></td>
                       <td className="text-sm text-muted-foreground">{u?.email || "—"}</td>
                       <td>

@@ -134,8 +134,15 @@ export function FeesPage() {
   async function collectPayment(e: React.FormEvent) {
     e.preventDefault(); if (!showCollect) return; setSaving(true);
     const supabase = createClient();
+    const nowIso = new Date().toISOString();
     await supabase.from("fee_receipts").insert({ school_id: schoolId, student_id: showCollect.student_id, assignment_id: showCollect.id, amount_paid: Number(collectForm.amount_paid), payment_mode: collectForm.payment_mode, remarks: collectForm.remarks, receipt_number: "" });
-    await supabase.from("student_fee_assignments").update({ status: "paid" }).eq("id", showCollect.id);
+    await supabase.from("student_fee_assignments").update({
+      status: "paid",
+      paid_amount: Number(collectForm.amount_paid),
+      paid_at: nowIso,
+      paid_date: nowIso.split("T")[0],
+      payment_mode: collectForm.payment_mode,
+    }).eq("id", showCollect.id);
     setSaving(false); setShowCollect(null); setCollectForm({ payment_mode: "cash", amount_paid: "", remarks: "" }); fetchAll();
   }
 

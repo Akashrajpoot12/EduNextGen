@@ -29,9 +29,9 @@ export function TeacherNoticesPage() {
     const load = async () => {
       const { data } = await supabase
         .from("announcements")
-        .select("id, title, content, type, priority, created_at, author:created_by(name, full_name)")
+        .select("id, title, content, type:notice_type, priority, created_at, author:created_by(name, full_name)")
         .eq("school_id", schoolId)
-        .in("audience", ["all", "teachers", "staff"])
+        .in("target_audience", ["all", "teachers", "staff"])
         .order("created_at", { ascending: false });
       setNotices(data || []);
       setLoading(false);

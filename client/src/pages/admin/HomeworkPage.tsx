@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -86,7 +87,7 @@ export function HomeworkPage() {
       
     } catch (error: any) {
       console.error("Error assigning homework:", error);
-      alert(`Failed to assign homework: ${error.message}`);
+      toast.error(`Failed to assign homework: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

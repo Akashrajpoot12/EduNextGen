@@ -99,11 +99,12 @@ export function LoginForm() {
             return;
           }
 
-          // 5. Fallback: check teachers/staff table
+          // 5. Fallback: check users table for a teacher/staff role
           const { data: teacherRec } = await supabase
-            .from('teachers')
-            .select('user_id')
-            .eq('user_id', userId)
+            .from('users')
+            .select('id')
+            .eq('id', userId)
+            .in('role', ['teacher', 'staff'])
             .maybeSingle();
 
           if (teacherRec) {

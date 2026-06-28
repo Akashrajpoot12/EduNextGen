@@ -150,13 +150,21 @@ serve(async (req) => {
         if (aErr) throw aErr;
         if (!assign) throw new Error("Fee assignment not found");
 
+        const netAmount = Math.max(0, Number(assign.amount || 0) - Number(assign.discount || 0) + Number(assign.fine || 0));
+        const nowIso = new Date().toISOString();
+
         const { error: uErr } = await supabase
           .from("student_fee_assignments")
-          .update({ status: "paid" })
+          .update({
+            status: "paid",
+            paid_amount: netAmount,
+            paid_at: nowIso,
+            paid_date: nowIso.split("T")[0],
+            payment_mode: "online",
+            razorpay_payment_id: razorpay_payment_id,
+          })
           .eq("id", feeAssignmentId);
         if (uErr) throw uErr;
-
-        const netAmount = Math.max(0, Number(assign.amount || 0) - Number(assign.discount || 0) + Number(assign.fine || 0));
         await supabase.from("fee_receipts").insert({
           school_id:   assign.school_id,
           student_id:  assign.student_id,

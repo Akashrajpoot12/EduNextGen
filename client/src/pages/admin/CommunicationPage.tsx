@@ -41,7 +41,8 @@ export function CommunicationPage() {
         .from('communications')
         .select(`id, recipient_type, message_type, subject, body, status, created_at, sender:sender_id(full_name)`)
         .eq('school_id', schoolId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (data) setMessages(data);
     } catch (error) {
@@ -58,9 +59,44 @@ export function CommunicationPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Note: In a real system, you would call a Server Action here that triggers Twilio SMS or Resend Email API.
-      // We are just logging the intent to the database for this UI module.
-      
+      let status = "sent";
+      // For WhatsApp / SMS we actually dispatch via the Fast2SMS edge function.
+      // Email / push are logged only (no provider wired yet).
+      if (messageType === "whatsapp" || messageType === "sms") {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              type: "broadcast",
+              schoolId,
+              data: {
+                recipientType,
+                channel: messageType,
+                message: subject ? `${subject}\n\n${body}` : body,
+              },
+            }),
+          }
+        );
+        if (!res.ok) throw new Error("Messaging service error");
+        const result = await res.json();
+        if (result.error) throw new Error(result.error);
+        const okCount = result.sent ?? 0, failCount = result.failed ?? 0;
+        if (okCount === 0 && failCount === 0) {
+          toast.warning("No recipients had a phone number on record.");
+          status = "no_recipients";
+        } else {
+          toast.success(`${messageType.toUpperCase()}: ${okCount} sent, ${failCount} failed`);
+          if (failCount > 0 && okCount === 0) status = "failed";
+        }
+      }
+
       const { error } = await supabase.from('communications').insert({
         school_id: schoolId,
         sender_id: user?.id,
@@ -68,21 +104,21 @@ export function CommunicationPage() {
         message_type: messageType,
         subject,
         body,
-        status: 'sent',
+        status,
       });
 
       if (error) throw error;
-      
+
       setRecipientType("");
       setMessageType("");
       setSubject("");
       setBody("");
       setIsDialogOpen(false);
       fetchMessages();
-      
+
     } catch (error: any) {
       console.error("Error sending message:", error);
-      alert(`Failed to send message: ${error.message}`);
+      toast.error(`Failed to send message: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -92,6 +128,7 @@ export function CommunicationPage() {
     switch(type) {
       case 'email': return <Mail className="w-4 h-4" />;
       case 'sms': return <Smartphone className="w-4 h-4" />;
+      case 'whatsapp': return <MessageCircle className="w-4 h-4" />;
       default: return <MessageSquare className="w-4 h-4" />;
     }
   };
@@ -170,8 +207,9 @@ export function CommunicationPage() {
                       <SelectValue placeholder="Select channel" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border text-foreground">
-                      <SelectItem value="email">Email Notification</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp Message</SelectItem>
                       <SelectItem value="sms">SMS Text Message</SelectItem>
+                      <SelectItem value="email">Email Notification</SelectItem>
                       <SelectItem value="push">In-App Push</SelectItem>
                     </SelectContent>
                   </Select>

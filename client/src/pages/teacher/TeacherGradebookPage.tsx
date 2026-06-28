@@ -74,17 +74,22 @@ export function TeacherGradebookPage() {
   async function handleSave() {
     if (!selectedExam || !teacherId || hasErrors) return;
     setSaving(true);
+    // exam_marks UNIQUE is (exam_id, student_id, subject) and subject is NOT NULL,
+    // so every row must carry the exam's subject and the upsert must conflict on it.
+    const subject = currentExam?.subject || "General";
     const rows = students.map(s => ({
       school_id: schoolId,
       exam_id: selectedExam,
       student_id: s.id,
+      subject,
       class_id: selectedClass,
       teacher_id: teacherId,
+      max_marks: totalMarks,
       marks_obtained: marks[s.id]?.marks ? Number(marks[s.id].marks) : null,
       remarks: marks[s.id]?.remarks || null,
     })).filter(r => r.marks_obtained !== null);
 
-    await supabase.from("exam_marks").upsert(rows, { onConflict: "exam_id,student_id" });
+    await supabase.from("exam_marks").upsert(rows, { onConflict: "exam_id,student_id,subject" });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

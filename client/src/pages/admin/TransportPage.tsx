@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -38,11 +39,18 @@ export function TransportPage() {
     setLoading(true);
     try {
       const { data: routesData } = await supabase
-        .from('routes')
-        .select(`id, route_name, stops, vehicles(vehicle_number, driver_name, driver_phone, capacity)`)
-        .eq('school_id', schoolId);
+        .from('transport_routes')
+        .select(`id, route_name, vehicle_number, driver_name, driver_phone, total_capacity, transport_stops(stop_name, stop_order)`)
+        .eq('school_id', schoolId)
+        .order('route_name');
 
-      if (routesData) setRoutes(routesData);
+      setRoutes((routesData || []).map((r: any) => ({
+        ...r,
+        stopsText: (r.transport_stops || [])
+          .sort((a: any, b: any) => (a.stop_order || 0) - (b.stop_order || 0))
+          .map((s: any) => s.stop_name)
+          .join(", "),
+      })));
     } catch (error) {
       console.error("Error fetching transport data:", error);
     } finally {
@@ -55,32 +63,33 @@ export function TransportPage() {
     setIsSubmitting(true);
     
     try {
-      // 1. Insert vehicle first
-      const { data: vehicleData, error: vError } = await supabase
-        .from('vehicles')
+      // 1. Insert the route (vehicle + driver live on transport_routes — the
+      //    canonical table that GPS tracking + the parent app read).
+      const { data: routeData, error: rError } = await supabase
+        .from('transport_routes')
         .insert({
           school_id: schoolId,
+          route_name: routeName,
           vehicle_number: vehicleNum,
           driver_name: driverName,
           driver_phone: driverPhone,
-          capacity: parseInt(capacity)
+          total_capacity: parseInt(capacity),
         })
         .select('id')
         .single();
 
-      if (vError) throw vError;
-      
-      // 2. Insert route linked to vehicle
-      const { error: rError } = await supabase
-        .from('routes')
-        .insert({
-          school_id: schoolId,
-          vehicle_id: vehicleData.id,
-          route_name: routeName,
-          stops: stops
-        });
-
       if (rError) throw rError;
+
+      // 2. Insert stops (comma-separated) into transport_stops
+      const stopList = stops.split(',').map(s => s.trim()).filter(Boolean);
+      if (stopList.length > 0) {
+        const { error: sError } = await supabase.from('transport_stops').insert(
+          stopList.map((stop_name, i) => ({
+            school_id: schoolId, route_id: routeData.id, stop_name, stop_order: i + 1,
+          }))
+        );
+        if (sError) throw sError;
+      }
       
       setRouteName("");
       setStops("");
@@ -93,7 +102,7 @@ export function TransportPage() {
       
     } catch (error: any) {
       console.error("Error creating route:", error);
-      alert(`Failed to create: ${error.message}`);
+      toast.error(`Failed to create: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -194,11 +203,11 @@ export function TransportPage() {
                       <div>
                         <h3 className="text-xl font-bold text-foreground">{route.route_name}</h3>
                         <div className="flex items-center text-emerald-400 text-sm mt-1 font-mono">
-                          <Bus className="w-3 h-3 mr-1" /> {route.vehicles?.vehicle_number}
+                          <Bus className="w-3 h-3 mr-1" /> {route.vehicle_number}
                         </div>
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-muted border border-border text-xs text-muted-foreground flex items-center">
-                        <Users className="w-3 h-3 mr-1" /> {route.vehicles?.capacity} Seats
+                        <Users className="w-3 h-3 mr-1" /> {route.total_capacity} Seats
                       </span>
                     </div>
 
@@ -207,19 +216,19 @@ export function TransportPage() {
                         <MapPin className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Stops</p>
-                          <p className="text-sm text-muted-foreground">{route.stops}</p>
+                          <p className="text-sm text-muted-foreground">{route.stopsText}</p>
                         </div>
                       </div>
                       
                       <div className="flex items-center justify-between p-3 rounded-lg bg-muted border border-border">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground font-bold">{route.vehicles?.driver_name?.charAt(0)}</span>
+                            <span className="text-xs text-muted-foreground font-bold">{route.driver_name?.charAt(0)}</span>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground">{route.vehicles?.driver_name}</p>
+                            <p className="text-sm font-medium text-foreground">{route.driver_name}</p>
                             <div className="flex items-center text-xs text-muted-foreground">
-                              <Phone className="w-3 h-3 mr-1" /> {route.vehicles?.driver_phone}
+                              <Phone className="w-3 h-3 mr-1" /> {route.driver_phone}
                             </div>
                           </div>
                         </div>

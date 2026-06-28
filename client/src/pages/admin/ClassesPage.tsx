@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,8 @@ export function ClassesPage() {
           school_id: schoolId,
           title: `Class Assignment: Grade ${gradeLevel}-${section}`,
           content: `You have been assigned as Class Teacher for Grade ${gradeLevel}, Section ${section}. Please check your dashboard for student list and timetable.`,
-          audience: 'teachers',
+          target_audience: 'teachers',
+          notice_type: 'announcement',
           priority: 'high',
         });
       }
@@ -102,7 +104,7 @@ export function ClassesPage() {
       
     } catch (error) {
       console.error("Error adding class:", error);
-      alert("Failed to add class. Check console.");
+      toast.error("Failed to add class. Check console.");
     } finally {
       setIsSubmitting(false);
     }

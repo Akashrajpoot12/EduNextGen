@@ -92,7 +92,7 @@ export function TeacherDashboard() {
           setTeacherName(profile.full_name);
         }
 
-        const todayDay = DAYS[new Date().getDay()];
+        const todayDow = (new Date().getDay() + 6) % 7; // timetables.day_of_week: Monday=0 … Sunday=6
         const todayStr = new Date().toISOString().split("T")[0];
 
         const [
@@ -110,7 +110,7 @@ export function TeacherDashboard() {
             .select("subject, period_number, start_time, classes:class_id(name)")
             .eq("school_id", schoolId)
             .eq("teacher_id", user.id)
-            .eq("day_of_week", todayDay)
+            .eq("day_of_week", todayDow)
             .order("period_number"),
           supabase.from("announcements")
             .select("id, title, created_at")
@@ -327,7 +327,8 @@ export function TeacherDashboard() {
         school_id: schoolId,
         title: `👑 Student of the Week: ${studentOfWeek.name}`,
         content: `Congratulations to ${studentOfWeek.name} for outstanding performance!`,
-        audience: "all",
+        target_audience: "all",
+        notice_type: "announcement",
       });
       if (error) throw error;
       toast.success("Announced!");

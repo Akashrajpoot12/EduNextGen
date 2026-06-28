@@ -1,0 +1,26 @@
+# ============================================================
+# Face Attendance Service — Phase 1 (Supabase-native)
+# Python 3.10+ recommended
+# ============================================================
+
+# ── ML / Vision ──────────────────────────────────────────────
+numpy>=2.0.0
+opencv-python>=4.9.0.80
+onnxruntime>=1.19.0              # CPU inference (swap for onnxruntime-gpu on GPU)
+insightface==0.7.3              # SCRFD detector + ArcFace embeddings (buffalo_l)
+
+# ── Supabase (shared SMS database) ───────────────────────────
+supabase>=2.5.0
+
+# ── Config ───────────────────────────────────────────────────
+pydantic>=2.9.2,<3.0
+pydantic-settings>=2.5.0
+python-dotenv==1.0.1
+
+# ── API ──────────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9         # multipart/form-data file uploads
+
+# ── Testing (dev) ────────────────────────────────────────────
+pytest==8.2.0

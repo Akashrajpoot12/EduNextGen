@@ -61,7 +61,8 @@ export function TeacherTimetablePage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {days.map((day, idx) => {
-            const daySchedule = schedule.filter(s => s.day_of_week === day);
+            // timetables.day_of_week is an INT index (Monday=0 … Saturday=5)
+            const daySchedule = schedule.filter(s => s.day_of_week === idx);
             if (daySchedule.length === 0) return null;
 
             return (

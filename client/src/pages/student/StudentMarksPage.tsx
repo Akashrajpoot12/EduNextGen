@@ -31,24 +31,24 @@ export function StudentMarksPage() {
       // Get student record
       const { data: student } = await supabase
         .from("students")
-        .select("id, user_id, users:user_id(full_name)")
+        .select("id, user_id, name")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!student) { setLoading(false); return; }
-      setStudentName((student.users as any)?.full_name || "");
+      setStudentName((student as any).name || "");
 
       // Fetch marks with exam info (exam_marks keys on students.id)
       const { data: marks } = await supabase
         .from("exam_marks")
-        .select("marks_obtained, grade, exams:exam_id(id, name, subject, exam_type, total_marks, school_id)")
+        .select("marks_obtained, grade, subject, exams:exam_id(id, name, exam_type, total_marks, school_id)")
         .eq("student_id", student.id);
 
       const filtered = (marks || []).filter((m: any) => m.exams?.school_id === schoolId);
       const mapped: ExamResult[] = filtered.map((m: any) => ({
         exam_id: m.exams?.id,
         exam_name: m.exams?.name || "—",
-        subject: m.exams?.subject || "—",
+        subject: m.subject || "—",
         exam_type: m.exams?.exam_type || "—",
         marks_obtained: m.marks_obtained,
         total_marks: m.exams?.total_marks || 100,
