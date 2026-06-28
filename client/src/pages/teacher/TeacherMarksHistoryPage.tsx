@@ -24,7 +24,7 @@ export function TeacherMarksHistoryPage() {
     if (!selectedExam) return;
     setLoadingMarks(true);
     supabase.from("exam_marks")
-      .select("marks_obtained, grade, students:student_id(users:user_id(full_name))")
+      .select("marks_obtained, grade, students:student_id(name)")
       .eq("exam_id", selectedExam)
       .order("marks_obtained", { ascending: false })
       .then(({ data }) => { setMarks(data || []); setLoadingMarks(false); });
@@ -42,7 +42,7 @@ export function TeacherMarksHistoryPage() {
     const header = ["Rank", "Student Name", "Marks Obtained", "Max Marks", "Percentage", "Grade", "Status"];
     const rows = marks.map((m, i) => {
       const pct = Math.round((m.marks_obtained / total) * 100);
-      return [i + 1, m.students?.users?.full_name || "—", m.marks_obtained, total, `${pct}%`, m.grade || "—", pct >= 33 ? "Pass" : "Fail"];
+      return [i + 1, m.students?.name || "—", m.marks_obtained, total, `${pct}%`, m.grade || "—", pct >= 33 ? "Pass" : "Fail"];
     });
     const csv = [header, ...rows].map(row => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -53,7 +53,7 @@ export function TeacherMarksHistoryPage() {
   }
 
   const chartData = marks.slice(0, 20).map(m => ({
-    name: (m.students?.users?.full_name || "").split(" ")[0],
+    name: (m.students?.name || "").split(" ")[0],
     marks: m.marks_obtained,
     fill: (m.marks_obtained / total) >= 0.75 ? "#10b981" : (m.marks_obtained / total) >= 0.50 ? "#f59e0b" : "#ef4444",
   }));
@@ -131,7 +131,7 @@ export function TeacherMarksHistoryPage() {
                     return (
                       <tr key={i}>
                         <td className="text-muted-foreground">{i + 1}</td>
-                        <td className="font-medium">{m.students?.users?.full_name || "—"}</td>
+                        <td className="font-medium">{m.students?.name || "—"}</td>
                         <td>{m.marks_obtained}/{total}</td>
                         <td>
                           <div className="flex items-center gap-2">

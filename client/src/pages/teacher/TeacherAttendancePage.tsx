@@ -327,7 +327,7 @@ export function TeacherAttendancePage() {
         }
       }
     } catch (err: any) {
-      alert("Failed to save: " + err.message);
+      toast.error("Failed to save: " + err.message);
     } finally {
       setIsSaving(false);
     }

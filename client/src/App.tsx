@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AccountSettingsPage } from "./pages/shared/AccountSettingsPage";
 import { AdmissionFormPage } from "./pages/public/AdmissionFormPage";
@@ -25,7 +26,8 @@ import { ClassesPage } from "./pages/admin/ClassesPage";
 import { CommunicationPage } from "./pages/admin/CommunicationPage";
 import { DocumentsPage } from "./pages/admin/DocumentsPage";
 import { ExamsPage } from "./pages/admin/ExamsPage";
-import { FaceAiPage } from "./pages/admin/FaceAiPage";
+// Lazy: pulls in face-api.js + TensorFlow (~MBs) only when an admin opens this route.
+const FaceAiPage = lazy(() => import("./pages/admin/FaceAiPage").then(m => ({ default: m.FaceAiPage })));
 import { FeesPage } from "./pages/admin/FeesPage";
 import { HomeworkPage } from "./pages/admin/HomeworkPage";
 import { InventoryPage } from "./pages/admin/InventoryPage";
@@ -82,7 +84,6 @@ import { TeacherGradebookPage } from "./pages/teacher/TeacherGradebookPage";
 import { TeacherNoticesPage } from "./pages/teacher/TeacherNoticesPage";
 import { TeacherSyllabusPage } from "./pages/teacher/TeacherSyllabusPage";
 import { TeacherStudentsPage } from "./pages/teacher/TeacherStudentsPage";
-import { TeacherProfilePage } from "./pages/teacher/TeacherProfilePage";
 import { TeacherSubmissionsPage } from "./pages/teacher/TeacherSubmissionsPage";
 import { TeacherMarksHistoryPage } from "./pages/teacher/TeacherMarksHistoryPage";
 import { TeacherAttendanceReportPage } from "./pages/teacher/TeacherAttendanceReportPage";
@@ -96,7 +97,6 @@ import { StudentNoticesPage } from "./pages/student/StudentNoticesPage";
 import { StudentTimetablePage } from "./pages/student/StudentTimetablePage";
 import { StudentMarksPage } from "./pages/student/StudentMarksPage";
 import { StudentAttendancePage } from "./pages/student/StudentAttendancePage";
-import { StudentProfilePage } from "./pages/student/StudentProfilePage";
 import { StudentFeesPage } from "./pages/student/StudentFeesPage";
 import { StudentLeavePage } from "./pages/student/StudentLeavePage";
 import { StudentMessagesPage } from "./pages/student/StudentMessagesPage";
@@ -111,7 +111,6 @@ import { ParentMarksPage } from "./pages/parent/ParentMarksPage";
 import { ParentHomeworkPage } from "./pages/parent/ParentHomeworkPage";
 import { ParentTimetablePage } from "./pages/parent/ParentTimetablePage";
 import { ParentLeavePage } from "./pages/parent/ParentLeavePage";
-import { ParentProfilePage } from "./pages/parent/ParentProfilePage";
 
 import { SuperAdminDashboard } from "./pages/super-admin/SuperAdminDashboard";
 import SetupPage from "./pages/SetupPage";
@@ -181,7 +180,7 @@ function App() {
               <Route path="communication" element={<CommunicationPage />} />
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="exams" element={<ExamsPage />} />
-              <Route path="face-ai" element={<FaceAiPage />} />
+              <Route path="face-ai" element={<Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading Face AI…</div>}><FaceAiPage /></Suspense>} />
               <Route path="fees" element={<FeesPage />} />
               <Route path="homework" element={<HomeworkPage />} />
               <Route path="inventory" element={<InventoryPage />} />

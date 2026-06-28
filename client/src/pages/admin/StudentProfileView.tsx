@@ -57,7 +57,7 @@ export function StudentProfileView() {
         .select("date, status").eq("student_id", studentId)
         .order("date", { ascending: false }).limit(60),
       supabase.from("exam_marks")
-        .select("marks_obtained, max_marks, subject_name, exams:exam_id(title)")
+        .select("marks_obtained, max_marks, subject, exams:exam_id(name)")
         .eq("student_id", studentId).eq("school_id", schoolId)
         .order("created_at", { ascending: false }).limit(30),
       supabase.from("student_fee_assignments")
@@ -266,7 +266,7 @@ export function StudentProfileView() {
                   const pct = Math.round((m.marks_obtained / (m.max_marks || 100)) * 100);
                   return (
                     <div key={i} className="flex items-center gap-3">
-                      <p className="text-xs text-muted-foreground w-24 truncate">{m.subject_name || m.exams?.title}</p>
+                      <p className="text-xs text-muted-foreground w-24 truncate">{m.subject || m.exams?.name}</p>
                       <div className="flex-1 bg-muted rounded-full h-1.5">
                         <div className={`h-1.5 rounded-full ${pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500"}`}
                           style={{ width: `${pct}%` }} />
@@ -386,8 +386,8 @@ export function StudentProfileView() {
                   const pct = Math.round((m.marks_obtained / (m.max_marks || 100)) * 100);
                   return (
                     <tr key={i}>
-                      <td className="px-5 py-3 text-muted-foreground">{m.exams?.title || "—"}</td>
-                      <td className="px-5 py-3 font-medium">{m.subject_name}</td>
+                      <td className="px-5 py-3 text-muted-foreground">{m.exams?.name || "—"}</td>
+                      <td className="px-5 py-3 font-medium">{m.subject}</td>
                       <td className="px-5 py-3 text-center">{m.marks_obtained}/{m.max_marks}</td>
                       <td className="px-5 py-3 text-center">
                         <span className={pct >= 75 ? "text-emerald-600" : pct >= 50 ? "text-amber-600" : "text-red-500"}>

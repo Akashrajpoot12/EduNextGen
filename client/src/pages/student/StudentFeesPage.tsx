@@ -14,6 +14,8 @@ export function StudentFeesPage() {
   const [loading, setLoading] = useState(true);
   const [fees, setFees] = useState<any[]>([]);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [studentName, setStudentName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
 
   useEffect(() => { fetchFees(); }, []);
 
@@ -26,21 +28,31 @@ export function StudentFeesPage() {
       // Get student record
       const { data: student } = await supabase
         .from("students")
-        .select("id, school_id")
+        .select("id, school_id, first_name, last_name, enrollment_number, schools:school_id(name)")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!student) { setLoading(false); return; }
       setStudentId(student.id);
+      setStudentName(`${student.first_name || ""} ${student.last_name || ""}`.trim());
+      setSchoolName(student.schools?.name || "School");
 
-      // Fetch fee records for this student
+      // Fee dues assigned by admin — canonical table (same as parent/admin/dashboard)
       const { data: feeData } = await supabase
-        .from("fees")
-        .select("id, amount, due_date, paid_date, status, description, fee_type")
+        .from("student_fee_assignments")
+        .select("id, amount, paid_amount, due_date, status, fee_structure:fee_structure_id(name)")
         .eq("student_id", student.id)
         .order("due_date", { ascending: false });
 
-      setFees(feeData || []);
+      setFees((feeData || []).map((f: any) => ({
+        id: f.id,
+        amount: f.amount,
+        due_date: f.due_date,
+        paid_date: null,
+        status: f.status,
+        description: f.fee_structure?.name || "School Fee",
+        fee_type: f.fee_structure?.name || "Fee",
+      })));
     } catch (e) {
       console.error(e);
     } finally {
@@ -50,6 +62,41 @@ export function StudentFeesPage() {
 
   const totalDue = fees.filter(f => f.status !== "paid").reduce((s, f) => s + (f.amount || 0), 0);
   const totalPaid = fees.filter(f => f.status === "paid").reduce((s, f) => s + (f.amount || 0), 0);
+
+  function printReceipt(fee: any) {
+    const paidOn = fee.paid_date ? new Date(fee.paid_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+    const amount = `₹${(fee.amount || 0).toLocaleString("en-IN")}`;
+    const receiptNo = `RC-${String(fee.id).slice(0, 8).toUpperCase()}`;
+    const w = window.open("", "_blank", "width=480,height=640");
+    if (!w) { return; }
+    w.document.write(`<!doctype html><html><head><title>Receipt ${receiptNo}</title>
+      <style>
+        *{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}
+        body{padding:28px;color:#111}
+        .head{text-align:center;border-bottom:2px solid #7c3aed;padding-bottom:12px;margin-bottom:18px}
+        .head h1{margin:0;font-size:20px;color:#7c3aed}
+        .head p{margin:4px 0 0;font-size:12px;color:#555}
+        .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #ddd;font-size:14px}
+        .row span:first-child{color:#666}
+        .total{display:flex;justify-content:space-between;margin-top:14px;padding:12px;background:#f5f3ff;border-radius:8px;font-size:18px;font-weight:bold}
+        .stamp{margin-top:22px;text-align:center}
+        .stamp span{display:inline-block;border:3px solid #16a34a;color:#16a34a;padding:6px 18px;border-radius:8px;font-weight:bold;transform:rotate(-8deg);letter-spacing:2px}
+        .foot{margin-top:26px;text-align:center;font-size:11px;color:#888}
+      </style></head><body>
+      <div class="head"><h1>${schoolName}</h1><p>Fee Payment Receipt</p></div>
+      <div class="row"><span>Receipt No</span><span>${receiptNo}</span></div>
+      <div class="row"><span>Student</span><span>${studentName || "—"}</span></div>
+      <div class="row"><span>Description</span><span>${fee.description || fee.fee_type || "Fee"}</span></div>
+      <div class="row"><span>Payment Date</span><span>${paidOn}</span></div>
+      <div class="row"><span>Status</span><span>PAID</span></div>
+      <div class="total"><span>Amount Paid</span><span>${amount}</span></div>
+      <div class="stamp"><span>PAID</span></div>
+      <div class="foot">This is a computer-generated receipt.<br/>${schoolName}</div>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  }
 
   const statusStyle = (s: string) => {
     if (s === "paid") return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
@@ -148,7 +195,7 @@ export function StudentFeesPage() {
                           </td>
                           <td className="px-4 py-4 text-center">
                             {fee.status === "paid" ? (
-                              <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground h-7 px-2">
+                              <Button size="sm" variant="ghost" onClick={() => printReceipt(fee)} className="text-emerald-500 hover:text-emerald-400 h-7 px-2">
                                 <Download className="w-3.5 h-3.5 mr-1" /> Receipt
                               </Button>
                             ) : (

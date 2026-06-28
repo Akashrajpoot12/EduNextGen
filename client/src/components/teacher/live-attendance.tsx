@@ -43,7 +43,7 @@ export function LiveAttendance() {
     // Supabase Realtime Subscription Listener
     // Instantly intercepts PostgreSQL INSERT events triggered by the biometric scanners
     const channel = supabase
-      .channel('live-attendance-updates')
+      .channel(`live-attendance-${tenantId}`)
       .on(
         'postgres_changes',
         {

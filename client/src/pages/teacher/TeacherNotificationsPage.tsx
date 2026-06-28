@@ -30,9 +30,9 @@ export function TeacherNotificationsPage() {
     // Fetch announcements targeted to teachers/all as notifications
     const { data: ann } = await supabase
       .from("announcements")
-      .select("id, title, content, type, priority, created_at, audience")
+      .select("id, title, content, type:notice_type, priority, created_at, audience:target_audience")
       .eq("school_id", schoolId)
-      .in("audience", ["all", "teachers", "staff"])
+      .in("target_audience", ["all", "teachers", "staff"])
       .order("created_at", { ascending: false })
       .limit(50);
 

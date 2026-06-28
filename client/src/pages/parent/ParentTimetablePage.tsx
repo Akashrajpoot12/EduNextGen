@@ -104,8 +104,9 @@ export function ParentTimetablePage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {DAYS.map(day => {
-            const periods = schedule.filter(s => s.day_of_week === day);
+          {DAYS.map((day, idx) => {
+            // timetables.day_of_week is an INT index (Monday=0 … Saturday=5)
+            const periods = schedule.filter(s => s.day_of_week === idx);
             if (periods.length === 0) return null;
             return (
               <div key={day} className="bg-card border border-border rounded-xl overflow-hidden">

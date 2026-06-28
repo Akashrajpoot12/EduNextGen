@@ -32,10 +32,22 @@ export function FaceAiPage() {
   const [registeredFaces, setRegisteredFaces] = useState<any[]>([]); // from DB
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [savingFace, setSavingFace]       = useState(false);
+  const [aiEnrolling, setAiEnrolling]     = useState(false);
+  const [aiCount, setAiCount]             = useState(0);
+  const FACE_SERVICE_URL = import.meta.env.VITE_FACE_SERVICE_URL;
 
   const videoRef       = useRef<HTMLVideoElement>(null);
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaStreamRef  = useRef<MediaStream | null>(null);
+
+  // Stop the camera + scanner when leaving the page (else the webcam stays live).
+  useEffect(() => {
+    return () => {
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+    };
+  }, []);
 
   // Load face-api models
   useEffect(() => {
@@ -101,6 +113,7 @@ export function FaceAiPage() {
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+      mediaStreamRef.current = stream;
       setMediaStream(stream);
       setIsCameraActive(true);
     } catch {
@@ -110,7 +123,8 @@ export function FaceAiPage() {
   }
 
   function stopCamera() {
-    mediaStream?.getTracks().forEach(t => t.stop());
+    mediaStreamRef.current?.getTracks().forEach(t => t.stop());
+    mediaStreamRef.current = null;
     setMediaStream(null);
     setIsCameraActive(false);
     stopScanner();
@@ -154,6 +168,68 @@ export function FaceAiPage() {
       toast.error("Error saving face: " + err.message, { id: toastId });
     }
     setSavingFace(false);
+  }
+
+  function captureBlob(): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      const video = videoRef.current;
+      if (!video) return resolve(null);
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(null);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9);
+    });
+  }
+
+  // High-accuracy enrollment: capture 15 photos and send them to the
+  // face-attendance service (ArcFace, 512-d → face_embeddings table).
+  async function aiEnroll() {
+    if (!videoRef.current || !selectedStudentId) {
+      toast.error("Select a student and start camera first.");
+      return;
+    }
+    if (!FACE_SERVICE_URL) {
+      toast.error("Face service not configured (set VITE_FACE_SERVICE_URL).");
+      return;
+    }
+    setAiEnrolling(true);
+    setAiCount(0);
+    const toastId = toast.loading("Capturing 15 photos — slowly move your head to different angles...");
+    try {
+      const SHOTS = 15;
+      const form = new FormData();
+      for (let i = 0; i < SHOTS; i++) {
+        const blob = await captureBlob();
+        if (blob) form.append("files", blob, `shot_${i}.jpg`);
+        setAiCount(i + 1);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      form.append("entity_type", "student");
+      form.append("entity_id", selectedStudentId);
+
+      const serviceKey = import.meta.env.VITE_FACE_SERVICE_KEY;
+      const res = await fetch(`${FACE_SERVICE_URL.replace(/\/$/, "")}/register`, {
+        method: "POST",
+        headers: serviceKey ? { "X-Service-Key": serviceKey } : undefined,
+        body: form,
+      });
+      const result = await res.json();
+      if (!res.ok || result.detail) throw new Error(result.detail || "Service error");
+
+      toast.success(
+        `AI enrolled: ${result.stored} photos saved (${result.total_on_record} total on record)`,
+        { id: toastId }
+      );
+      if (result.skipped) toast.info(`${result.skipped} photo(s) had no clear face and were skipped.`);
+    } catch (err: any) {
+      toast.error("AI enroll failed: " + err.message, { id: toastId });
+    } finally {
+      setAiEnrolling(false);
+      setAiCount(0);
+    }
   }
 
   async function deleteFace(studentId: string, name: string) {
@@ -209,7 +285,7 @@ export function FaceAiPage() {
             school_id: schoolId,
             date: today,
             status: "present",
-            marked_by: "face_ai",
+            method: "face_ai",
           }, { onConflict: "student_id,date" });
 
           toast.success(`Attendance marked for ${matched?.name}`);
@@ -305,6 +381,7 @@ export function FaceAiPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Select Student</label>
                     <select value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)}
+                      title="Select student" aria-label="Select student"
                       className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                       <option value="">-- Choose student --</option>
                       {unregistered.map(s => (
@@ -324,8 +401,19 @@ export function FaceAiPage() {
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
                   {savingFace
                     ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
-                    : <><ScanFace className="w-4 h-4 mr-2" /> Capture & Save</>}
+                    : <><ScanFace className="w-4 h-4 mr-2" /> Quick Capture (browser)</>}
                 </Button>
+
+                {FACE_SERVICE_URL && (
+                  <Button onClick={aiEnroll}
+                    disabled={!isCameraActive || !selectedStudentId || aiEnrolling}
+                    variant="outline"
+                    className="w-full border-purple-500/40 text-purple-600 hover:bg-purple-500/10">
+                    {aiEnrolling
+                      ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Capturing {aiCount}/15...</>
+                      : <><UserPlus className="w-4 h-4 mr-2" /> AI Enroll — 15 photos (high accuracy)</>}
+                  </Button>
+                )}
 
                 <div className="pt-4 border-t border-border">
                   <div className="flex justify-between text-sm mb-3">

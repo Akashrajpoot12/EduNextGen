@@ -25,7 +25,7 @@ export function ParentMarksPage() {
       if (!user) return;
       const { data: kids } = await supabase
         .from("students")
-        .select("id, user_id, users:user_id(full_name), classes:class_id(grade_level, section)")
+        .select("id, user_id, name, classes:class_id(grade_level, section)")
         .eq("school_id", schoolId)
         .eq("parent_user_id", user.id);
       if (kids && kids.length > 0) {
@@ -42,12 +42,12 @@ export function ParentMarksPage() {
       setLoadingMarks(true);
       const { data: marks } = await supabase
         .from("exam_marks")
-        .select("marks_obtained, grade, exams:exam_id(id, name, subject, exam_type, total_marks, school_id)")
+        .select("marks_obtained, grade, subject, exams:exam_id(id, name, exam_type, total_marks, school_id)")
         .eq("student_id", selectedChild);
       const filtered = (marks || []).filter((m: any) => m.exams?.school_id === schoolId);
       setResults(filtered.map((m: any) => ({
         exam_name: m.exams?.name || "—",
-        subject: m.exams?.subject || "—",
+        subject: m.subject || "—",
         exam_type: m.exams?.exam_type || "—",
         marks_obtained: m.marks_obtained,
         total_marks: m.exams?.total_marks || 100,
@@ -96,7 +96,7 @@ export function ParentMarksPage() {
           className="h-10 rounded-lg border border-border bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 w-72">
           {children.map(c => (
             <option key={c.id} value={c.id}>
-              {(c.users as any)?.full_name} — Class {(c.classes as any)?.grade_level}-{(c.classes as any)?.section}
+              {(c as any).name} — Class {(c.classes as any)?.grade_level}-{(c.classes as any)?.section}
             </option>
           ))}
         </select>
@@ -105,10 +105,10 @@ export function ParentMarksPage() {
       {selectedChildData && (
         <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center font-bold text-amber-600">
-            {((selectedChildData.users as any)?.full_name || "?")[0]}
+            {((selectedChildData as any)?.name || "?")[0]}
           </div>
           <div>
-            <p className="font-semibold">{(selectedChildData.users as any)?.full_name}</p>
+            <p className="font-semibold">{(selectedChildData as any)?.name}</p>
             <p className="text-xs text-muted-foreground">
               Class {(selectedChildData.classes as any)?.grade_level} - {(selectedChildData.classes as any)?.section}
             </p>

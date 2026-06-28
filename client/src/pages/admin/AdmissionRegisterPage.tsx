@@ -28,7 +28,7 @@ export function AdmissionRegisterPage() {
     if (!schoolId) return;
     setLoading(true);
     Promise.all([
-      supabase.from("students").select("id, name, roll_number, father_name, mother_name, date_of_birth, phone, address, admission_number, gender, religion, caste, created_at, class_id, previous_school, previous_class, tc_number").eq("school_id", schoolId).order("created_at"),
+      supabase.from("students").select("id, name, roll_number, father_name, mother_name, date_of_birth, phone, address, admission_number, gender, created_at, class_id, previous_school").eq("school_id", schoolId).order("created_at"),
       supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
       supabase.from("schools").select("name, address, phone").eq("id", schoolId).single(),
     ]).then(([sRes, cRes, schRes]) => {

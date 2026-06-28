@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { useSearchParams } from "react-router-dom";
-import { BookOpen, CheckCircle, ChevronDown, ChevronUp, Star, Clock } from "lucide-react";
+import { BookOpen, CheckCircle, ChevronDown, ChevronUp, Star, Clock, ExternalLink } from "lucide-react";
 
 type HW = { id: string; title: string; subject: string; due_date: string; class_name: string; total: number; submitted: number };
-type Submission = { id: string; submitted_at: string; notes?: string; student_name: string; grade?: number; feedback?: string };
+type Submission = { id: string; submitted_at: string; notes?: string; student_name: string; grade?: number; feedback?: string; attachment_url?: string };
 type GradeState = { marks: string; feedback: string; saving: boolean; saved: boolean };
 
 export function TeacherSubmissionsPage() {
@@ -57,19 +57,28 @@ export function TeacherSubmissionsPage() {
     if (submissions[hwId]) return;
     const { data } = await supabase
       .from("homework_submissions")
-      .select("id, submitted_at, notes, grade, feedback, students:student_id(users:user_id(full_name))")
+      .select("id, submitted_at, submission_text, grade, teacher_remarks, attachment_url, students:student_id(name)")
       .eq("homework_id", hwId)
       .order("submitted_at", { ascending: false });
 
     const mapped: Submission[] = (data || []).map((s: any) => ({
       id: s.id,
       submitted_at: s.submitted_at,
-      notes: s.notes,
+      notes: s.submission_text,
       grade: s.grade,
-      feedback: s.feedback,
-      student_name: s.students?.users?.full_name || "Unknown",
+      feedback: s.teacher_remarks,
+      attachment_url: s.attachment_url,
+      student_name: s.students?.name || "Unknown",
     }));
     setSubmissions(prev => ({ ...prev, [hwId]: mapped }));
+  }
+
+  // Homework bucket is private — open student files via a short-lived signed URL.
+  async function openAttachment(pathOrUrl?: string) {
+    if (!pathOrUrl) return;
+    if (pathOrUrl.startsWith("http")) { window.open(pathOrUrl, "_blank"); return; }
+    const { data } = await supabase.storage.from("homework").createSignedUrl(pathOrUrl, 60);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   }
 
   async function toggleExpand(hwId: string) {
@@ -88,9 +97,9 @@ export function TeacherSubmissionsPage() {
     setGradeField(subId, "saving", true);
     try {
       await supabase.from("homework_submissions").update({
-        grade: Number(g.marks),
-        feedback: g.feedback || null,
-        graded_at: new Date().toISOString(),
+        grade: g.marks,
+        teacher_remarks: g.feedback || null,
+        status: "graded",
       } as any).eq("id", subId);
 
       // Refresh submissions for this hw
@@ -178,6 +187,12 @@ export function TeacherSubmissionsPage() {
                                 }
                               </div>
                               {s.notes && <p className="text-xs text-muted-foreground italic pl-7">"{s.notes}"</p>}
+                              {s.attachment_url && (
+                                <button type="button" onClick={() => openAttachment(s.attachment_url)}
+                                  className="ml-7 text-xs flex items-center gap-1 text-primary hover:underline">
+                                  <ExternalLink className="w-3 h-3" /> View submitted file
+                                </button>
+                              )}
                               {s.feedback && isGraded && <p className="text-xs text-blue-600 dark:text-blue-400 pl-7">Feedback: {s.feedback}</p>}
 
                               {/* Grading form */}

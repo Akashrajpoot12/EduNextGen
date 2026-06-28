@@ -6,7 +6,7 @@ import { Printer, BarChart2 } from "lucide-react";
 type Exam    = { id: string; title: string; class_id: string };
 type Class   = { id: string; name: string };
 type Student = { id: string; name: string; roll_number: string; father_name?: string; date_of_birth?: string; admission_number?: string };
-type Mark    = { student_id: string; subject_name: string; marks_obtained: number; max_marks: number };
+type Mark    = { student_id: string; subject: string; marks_obtained: number; max_marks: number };
 
 const GRADE_SCALE = [
   { min: 91, grade: "A1", gp: 10, desc: "Outstanding" },
@@ -45,7 +45,7 @@ export function ReportCardPage() {
   useEffect(() => {
     if (!schoolId) return;
     Promise.all([
-      supabase.from("exams").select("id, title, class_id").eq("school_id", schoolId).order("created_at", { ascending: false }),
+      supabase.from("exams").select("id, title:name, class_id").eq("school_id", schoolId).order("created_at", { ascending: false }),
       supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
       supabase.from("schools").select("name").eq("id", schoolId).single(),
     ]).then(([e, c, s]) => {
@@ -59,7 +59,7 @@ export function ReportCardPage() {
     if (!selExam || !selClass) return;
     setLoading(true);
     const [markRes, stuRes] = await Promise.all([
-      supabase.from("exam_marks").select("student_id, subject_name, marks_obtained, max_marks").eq("school_id", schoolId).eq("exam_id", selExam),
+      supabase.from("exam_marks").select("student_id, subject, marks_obtained, max_marks").eq("school_id", schoolId).eq("exam_id", selExam),
       supabase.from("students").select("id, name, roll_number, father_name, date_of_birth, admission_number").eq("school_id", schoolId).eq("class_id", selClass).order("roll_number"),
     ]);
     const marks = markRes.data as Mark[] || [];
@@ -70,7 +70,7 @@ export function ReportCardPage() {
       const subjects = stuMarks.map(m => {
         const pct = m.max_marks > 0 ? Math.round((m.marks_obtained / m.max_marks) * 100) : 0;
         const g = getGrade(pct);
-        return { name: m.subject_name, obtained: m.marks_obtained, max: m.max_marks, pct, grade: g.grade, gp: g.gp };
+        return { name: m.subject, obtained: m.marks_obtained, max: m.max_marks, pct, grade: g.grade, gp: g.gp };
       }).sort((a, b) => a.name.localeCompare(b.name));
       const total    = subjects.reduce((s, x) => s + x.obtained, 0);
       const maxTotal = subjects.reduce((s, x) => s + x.max, 0);

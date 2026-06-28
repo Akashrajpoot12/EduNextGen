@@ -33,7 +33,7 @@ export function TeacherSidebar({ tenant }: { tenant: string }) {
       const { count } = await supabaseClient
         .from("announcements")
         .select("id", { count: "exact", head: true })
-        .in("audience", ["all", "teachers", "staff"]);
+        .in("target_audience", ["all", "teachers", "staff"]);
       const total = count || 0;
       setUnreadCount(Math.max(0, total - readIds.size));
 

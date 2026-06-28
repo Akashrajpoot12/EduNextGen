@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -92,7 +93,7 @@ export function PayrollPage() {
       
     } catch (error: any) {
       console.error("Error defining salary:", error);
-      alert(`Failed to define salary: ${error.message}`);
+      toast.error(`Failed to define salary: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

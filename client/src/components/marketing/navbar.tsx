@@ -12,18 +12,18 @@ export function Navbar() {
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link
-              to="#features"
+            <a
+              href="#features"
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
               Features
-            </Link>
-            <Link
-              to="#pricing"
+            </a>
+            <a
+              href="#pricing"
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
               Pricing
-            </Link>
+            </a>
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
@@ -31,7 +31,7 @@ export function Navbar() {
             {/* Search placeholder or empty space */}
           </div>
           <nav className="flex items-center space-x-2">
-            <Link to="http://admin.localhost:3000/super-admin" target="_blank" rel="noreferrer">
+            <Link to="/super-admin/login">
               <Button variant="ghost" className="h-8 px-4">
                 Login
               </Button>

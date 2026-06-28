@@ -40,7 +40,7 @@ export function TeacherMessagesPage() {
 
       const { data: students } = await supabase
         .from("students")
-        .select("user_id, users:user_id(full_name), classes:class_id(name), parent_id")
+        .select("user_id, name, classes:class_id(name), parent_id")
         .eq("school_id", schoolId);
 
       if (!students) { setLoading(false); return; }
@@ -57,7 +57,7 @@ export function TeacherMessagesPage() {
           id: p.id,
           name: p.full_name || p.email,
           email: p.email,
-          student_name: (child as any)?.users?.full_name || "—",
+          student_name: (child as any)?.name || "—",
           class_name: (child as any)?.classes?.name || "—",
         };
       });

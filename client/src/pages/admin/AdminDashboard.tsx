@@ -130,21 +130,22 @@ export function AdminDashboard() {
         supabase.from("daily_attendance").select("*", { count: "exact", head: true }).eq("school_id", schoolId).eq("date", today).eq("status", "absent"),
         supabase.from("daily_attendance").select("*", { count: "exact", head: true }).eq("school_id", schoolId).eq("date", today),
         supabase.rpc("pending_fees_summary", { p_school: schoolId }),
-        supabase.from("exams").select("title, exam_date, class_id").eq("school_id", schoolId).gte("exam_date", today).lte("exam_date", in7Days).order("exam_date").limit(5),
+        supabase.from("exams").select("title:name, exam_date:start_date, class_id").eq("school_id", schoolId).gte("start_date", today).lte("start_date", in7Days).order("start_date").limit(5),
         supabase.from("admission_applications").select("student_name, applying_for_class, applied_at, status").eq("school_id", schoolId).order("applied_at", { ascending: false }).limit(5),
         supabase.from("students").select("name, admission_number, created_at").eq("school_id", schoolId).order("created_at", { ascending: false }).limit(5),
         // Birthdays: students with a birthday TODAY (computed in DB, no 1000-row cap)
         supabase.rpc("students_birthdays_today", { p_school: schoolId }),
         // Birthdays: teachers (via profiles joined through user_roles)
-        supabase.from("user_roles").select("user_id, profiles(full_name, date_of_birth)").eq("school_id", schoolId).eq("role", "teacher"),
-        // Today's fee payments
-        supabase.from("fee_payments").select("amount").eq("school_id", schoolId).gte("created_at", `${today}T00:00:00`).lte("created_at", `${today}T23:59:59`),
+        supabase.from("user_roles").select("user_id, profiles:users(full_name, date_of_birth)").eq("school_id", schoolId).eq("role", "teacher"),
+        // Today's fee collection — fee_receipts is the canonical payments table
+        // (manual collection + online Razorpay both write it). Aliased so consumers stay unchanged.
+        supabase.from("fee_receipts").select("amount:amount_paid").eq("school_id", schoolId).gte("paid_at", `${today}T00:00:00`).lte("paid_at", `${today}T23:59:59`),
         // Below-75% count computed in the DB (handles 1M+ attendance rows)
         supabase.rpc("students_below_attendance", { p_school: schoolId, p_threshold: 0.75, p_days: 30 }),
         // Immediate exams (within 3 days)
-        supabase.from("exams").select("title, exam_date").eq("school_id", schoolId).gte("exam_date", today).lte("exam_date", in3Days).order("exam_date").limit(1),
-        // Feature 3: recent payments with student names
-        supabase.from("fee_payments").select("id, amount, created_at, payment_mode, student_id, students(name)").eq("school_id", schoolId).order("created_at", { ascending: false }).limit(5),
+        supabase.from("exams").select("title:name, exam_date:start_date").eq("school_id", schoolId).gte("start_date", today).lte("start_date", in3Days).order("start_date").limit(1),
+        // Feature 3: recent payments with student names (canonical fee_receipts, aliased)
+        supabase.from("fee_receipts").select("id, amount:amount_paid, created_at:paid_at, payment_mode, student_id, students(name)").eq("school_id", schoolId).order("paid_at", { ascending: false }).limit(5),
         // school name
         supabase.from("schools").select("name").eq("id", schoolId).maybeSingle(),
       ]);
@@ -282,7 +283,8 @@ export function AdminDashboard() {
         school_id: schoolId,
         title: `🏆 Topper of the Month: ${topper.name}`,
         content: `${topper.name} scored ${topper.avg}% average this month — Congratulations!`,
-        audience: "all",
+        target_audience: "all",
+        notice_type: "announcement",
       });
       if (error) throw error;
       toast.success("Announcement sent!");

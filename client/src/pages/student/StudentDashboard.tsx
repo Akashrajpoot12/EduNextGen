@@ -194,6 +194,7 @@ export function StudentDashboard() {
         const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
         const next7days  = new Date(now.getTime() + 7 * 86400000).toISOString().split("T")[0];
         const dayName    = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][now.getDay()];
+        const todayDow   = (now.getDay() + 6) % 7; // timetables.day_of_week: Monday=0 … Sunday=6
 
         const [
           { count: total }, { count: present },
@@ -208,9 +209,9 @@ export function StudentDashboard() {
           supabase.from("homework").select("*",{count:"exact",head:true}).eq("class_id",student.class_id).eq("school_id",schoolId).gte("due_date",today),
           supabase.from("homework").select("id,title,subject,due_date").eq("class_id",student.class_id).eq("school_id",schoolId).gte("due_date",today).lte("due_date",next7days).order("due_date").limit(4),
           supabase.from("exam_marks").select("marks_obtained,grade,exams:exam_id(name,total_marks)").eq("student_id",student.id).order("created_at",{ascending:false}).limit(4),
-          supabase.from("announcements").select("id,title,priority,created_at").eq("school_id",schoolId).in("audience",["all","students"]).order("created_at",{ascending:false}).limit(4),
+          supabase.from("announcements").select("id,title,priority,created_at").eq("school_id",schoolId).in("target_audience",["all","students"]).order("created_at",{ascending:false}).limit(4),
           supabase.from("student_fee_assignments").select("amount,paid_amount,due_date,status").eq("student_id",student.id).eq("status","pending").limit(5),
-          supabase.from("timetables").select("period_number,subject,start_time,end_time,teacher:teacher_id(full_name)").eq("class_id",student.class_id).eq("school_id",schoolId).eq("day_of_week",dayName).order("period_number"),
+          supabase.from("timetables").select("period_number,subject,start_time,end_time,teacher:teacher_id(full_name)").eq("class_id",student.class_id).eq("school_id",schoolId).eq("day_of_week",todayDow).order("period_number"),
           supabase.from("leave_requests").select("id",{count:"exact",head:true}).eq("student_id",student.id).eq("status","pending"),
         ]);
 
@@ -255,12 +256,12 @@ export function StudentDashboard() {
         try {
           const { data: allMarks } = await supabase
             .from("exam_marks")
-            .select("marks_obtained, exams:exam_id(subject, total_marks)")
+            .select("marks_obtained, subject, exams:exam_id(total_marks)")
             .eq("student_id", student.id);
           if (allMarks && allMarks.length > 0) {
             const subMap: Record<string, { total: number; maxTotal: number; count: number }> = {};
             for (const row of allMarks) {
-              const subject = (row.exams as any)?.subject;
+              const subject = (row as any).subject;
               const totalMarks = (row.exams as any)?.total_marks || 100;
               if (!subject) continue;
               if (!subMap[subject]) subMap[subject] = { total: 0, maxTotal: 0, count: 0 };

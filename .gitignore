@@ -13,6 +13,17 @@ credentials.md
 # Claude Code local workspace (never commit — caused stray git submodules)
 .claude/worktrees/
 
+# Large / source archives — never commit (e.g. 842MB face_attendance.zip)
+*.zip
+face_attendance.zip
+face_extract/
+
+# Python service local artifacts
+**/venv/
+**/.venv/
+**/__pycache__/
+**/models_cache/
+
 # Dependency directories
 node_modules/
 jspm_packages/

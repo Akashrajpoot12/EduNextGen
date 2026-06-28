@@ -73,7 +73,7 @@ export function ParentFeesPage() {
     const { data } = await supabase
       .from("student_fee_assignments")
       .select(`
-        id, amount, due_date, status, paid_at, discount, late_fine,
+        id, amount, due_date, status, paid_at, discount, fine,
         academic_year, payment_mode, razorpay_payment_id,
         fee_structure:fee_structure_id(name, frequency, description)
       `)
@@ -87,6 +87,43 @@ export function ParentFeesPage() {
   const totalPaid    = fees.filter(f => f.status === "paid").reduce((s, f) => s + (f.amount || 0), 0);
   const totalPending = fees.filter(f => f.status !== "paid" && f.status !== "waived").reduce((s, f) => s + (f.amount || 0), 0);
   const overdueFees  = fees.filter(f => f.status === "pending" && new Date(f.due_date) < new Date());
+
+  function printReceipt(fee: any) {
+    const childName = selectedChild ? `${selectedChild.first_name || ""} ${selectedChild.last_name || ""}`.trim() : "Student";
+    const schoolName = school?.name || "School";
+    const paidOn = fee.paid_at ? new Date(fee.paid_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+    const amount = `₹${(fee.amount || 0).toLocaleString("en-IN")}`;
+    const receiptNo = fee.receipt_number || `RC-${String(fee.id).slice(0, 8).toUpperCase()}`;
+    const w = window.open("", "_blank", "width=480,height=640");
+    if (!w) { toast.error("Please allow pop-ups to view the receipt."); return; }
+    w.document.write(`<!doctype html><html><head><title>Receipt ${receiptNo}</title>
+      <style>
+        *{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}
+        body{padding:28px;color:#111}
+        .head{text-align:center;border-bottom:2px solid #d97706;padding-bottom:12px;margin-bottom:18px}
+        .head h1{margin:0;font-size:20px;color:#d97706}
+        .head p{margin:4px 0 0;font-size:12px;color:#555}
+        .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #ddd;font-size:14px}
+        .row span:first-child{color:#666}
+        .total{display:flex;justify-content:space-between;margin-top:14px;padding:12px;background:#fffbeb;border-radius:8px;font-size:18px;font-weight:bold}
+        .stamp{margin-top:22px;text-align:center}
+        .stamp span{display:inline-block;border:3px solid #16a34a;color:#16a34a;padding:6px 18px;border-radius:8px;font-weight:bold;transform:rotate(-8deg);letter-spacing:2px}
+        .foot{margin-top:26px;text-align:center;font-size:11px;color:#888}
+      </style></head><body>
+      <div class="head"><h1>${schoolName}</h1><p>Fee Payment Receipt</p></div>
+      <div class="row"><span>Receipt No</span><span>${receiptNo}</span></div>
+      <div class="row"><span>Student</span><span>${childName}</span></div>
+      <div class="row"><span>Description</span><span>${fee.fee_structure?.name || "School Fee"}</span></div>
+      <div class="row"><span>Payment Date</span><span>${paidOn}</span></div>
+      <div class="row"><span>Mode</span><span>${fee.payment_mode || "—"}</span></div>
+      <div class="total"><span>Amount Paid</span><span>${amount}</span></div>
+      <div class="stamp"><span>PAID</span></div>
+      <div class="foot">This is a computer-generated receipt.<br/>${schoolName}</div>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  }
 
   async function handlePay(fee: any) {
     const ok = await loadRazorpay();
@@ -309,10 +346,10 @@ export function ParentFeesPage() {
                       {fee.status === "paid" && fee.paid_at && (
                         <p className="text-xs text-emerald-600 mt-0.5">Paid on {fmtDate(fee.paid_at)}</p>
                       )}
-                      {(fee.discount > 0 || fee.late_fine > 0) && (
+                      {(fee.discount > 0 || fee.fine > 0) && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {fee.discount > 0 && <span className="text-emerald-600">Discount: -{fmtMoney(fee.discount)} </span>}
-                          {fee.late_fine > 0 && <span className="text-red-500">Late Fine: +{fmtMoney(fee.late_fine)}</span>}
+                          {fee.fine > 0 && <span className="text-red-500">Late Fine: +{fmtMoney(fee.fine)}</span>}
                         </p>
                       )}
                     </div>
@@ -322,7 +359,7 @@ export function ParentFeesPage() {
                     <p className="text-xl font-bold">{fmtMoney(fee.amount)}</p>
                     {fee.status === "paid" ? (
                       <button type="button"
-                        onClick={() => toast.info("Receipt download coming soon")}
+                        onClick={() => printReceipt(fee)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-lg hover:bg-muted transition-colors">
                         <Download className="w-3.5 h-3.5" /> Receipt
                       </button>

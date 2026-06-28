@@ -36,7 +36,7 @@ export function TeacherAttendanceReportPage() {
 
     const { data: students } = await supabase
       .from("students")
-      .select("id, enrollment_number, users:user_id(full_name)")
+      .select("id, enrollment_number, name")
       .eq("class_id", selectedClass);
 
     if (!students || students.length === 0) { setReport([]); setLoading(false); return; }
@@ -54,7 +54,7 @@ export function TeacherAttendanceReportPage() {
       const pct = agg.total ? Math.round((agg.present / agg.total) * 100) : 0;
       return {
         id: s.id,
-        name: s.users?.full_name || "—",
+        name: s.name || "—",
         roll: s.enrollment_number,
         total: agg.total,
         present: agg.present,

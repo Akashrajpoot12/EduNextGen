@@ -26,13 +26,27 @@ export function LeavesPage() {
   async function fetchLeaves() {
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from('leave_applications')
-        .select(`id, leave_type, start_date, end_date, reason, status, created_at, users:user_id(full_name, email)`)
-        .eq('school_id', schoolId)
-        .order('created_at', { ascending: false });
+      // Staff/teacher leaves AND student/parent leaves come from two tables — merge both.
+      const [staffRes, studentRes] = await Promise.all([
+        supabase.from('leave_applications')
+          .select(`id, leave_type, start_date, end_date, reason, status, created_at, users:user_id(full_name, email)`)
+          .eq('school_id', schoolId).order('created_at', { ascending: false }),
+        supabase.from('leave_requests')
+          .select(`id, leave_type, from_date, to_date, reason, status, created_at, students:student_id(name)`)
+          .eq('school_id', schoolId).order('created_at', { ascending: false }),
+      ]);
 
-      if (data) setLeaves(data);
+      const staff = (staffRes.data || []).map((l: any) => ({
+        id: l.id, kind: 'staff', name: l.users?.full_name || 'Unknown', email: l.users?.email || '',
+        leave_type: l.leave_type, start_date: l.start_date, end_date: l.end_date,
+        reason: l.reason, status: l.status, created_at: l.created_at,
+      }));
+      const students = (studentRes.data || []).map((l: any) => ({
+        id: l.id, kind: 'student', name: l.students?.name || 'Student', email: 'Student / Parent',
+        leave_type: l.leave_type, start_date: l.from_date, end_date: l.to_date,
+        reason: l.reason, status: l.status, created_at: l.created_at,
+      }));
+      setLeaves([...staff, ...students].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')));
     } catch (error) {
       console.error("Error fetching leaves:", error);
     } finally {
@@ -40,15 +54,14 @@ export function LeavesPage() {
     }
   }
 
-  const handleUpdateStatus = async (id: string, status: string) => {
+  const handleUpdateStatus = async (id: string, status: string, kind: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-
-      // Get leave details before updating (to notify applicant)
       const leave = leaves.find(l => l.id === id);
+      const table = kind === 'student' ? 'leave_requests' : 'leave_applications';
 
       const { error } = await supabase
-        .from('leave_applications')
+        .from(table)
         .update({ status, reviewed_by: user?.id })
         .eq('id', id);
 
@@ -56,14 +69,15 @@ export function LeavesPage() {
 
       toast.success(`Leave ${status}`);
 
-      // Notify applicant via announcements
+      // Notify the applicant's group via announcements
       if (leave) {
         const emoji = status === "approved" ? "✅" : "❌";
         await supabase.from("announcements").insert({
           school_id: schoolId,
           title: `${emoji} Leave ${status.charAt(0).toUpperCase() + status.slice(1)}: ${leave.leave_type}`,
-          content: `Your leave request from ${leave.start_date} to ${leave.end_date} has been ${status} by the administration.`,
-          audience: "teachers",
+          content: `A leave request from ${leave.start_date} to ${leave.end_date} has been ${status} by the administration.`,
+          target_audience: kind === 'student' ? "students" : "teachers",
+          notice_type: "announcement",
           priority: status === "approved" ? "normal" : "high",
         });
       }
@@ -93,7 +107,7 @@ export function LeavesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Leave Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Review and approve leave applications from staff and teachers.</p>
+          <p className="text-sm text-muted-foreground mt-1">Review and approve leave applications from staff, teachers, students and parents.</p>
         </div>
       </div>
 
@@ -133,8 +147,11 @@ export function LeavesPage() {
                   <CardContent className="p-6 relative z-10 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-lg font-bold text-foreground mb-1">{leave.users?.full_name || 'Unknown User'}</h3>
-                        <p className="text-xs text-muted-foreground">{leave.users?.email}</p>
+                        <h3 className="text-lg font-bold text-foreground mb-1">{leave.name}</h3>
+                        <p className="text-xs text-muted-foreground">{leave.email}</p>
+                        <span className={`inline-block mt-1 text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${leave.kind === 'student' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                          {leave.kind === 'student' ? 'Student' : 'Staff'}
+                        </span>
                       </div>
                       <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${getStatusColor(leave.status)}`}>
                         {leave.status}
@@ -156,7 +173,7 @@ export function LeavesPage() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => handleUpdateStatus(leave.id, 'rejected')}
+                          onClick={() => handleUpdateStatus(leave.id, 'rejected', leave.kind)}
                           className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                         >
                           <XCircle className="w-4 h-4 mr-1" /> Reject
@@ -164,7 +181,7 @@ export function LeavesPage() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => handleUpdateStatus(leave.id, 'approved')}
+                          onClick={() => handleUpdateStatus(leave.id, 'approved', leave.kind)}
                           className="w-full border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1" /> Approve

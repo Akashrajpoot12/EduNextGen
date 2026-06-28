@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,7 @@ export function InventoryPage() {
       
     } catch (error: any) {
       console.error("Error adding item:", error);
-      alert(`Failed to add item: ${error.message}`);
+      toast.error(`Failed to add item: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

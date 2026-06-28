@@ -107,9 +107,9 @@ export function ParentDashboard() {
       // Notices
       const { data: noticeData } = await supabase
         .from("announcements")
-        .select("id, title, type, created_at")
+        .select("id, title, type:notice_type, created_at")
         .eq("school_id", schoolId)
-        .in("audience", ["all", "parents"])
+        .in("target_audience", ["all", "parents"])
         .order("created_at", { ascending: false })
         .limit(4);
       setNotices(noticeData || []);
@@ -234,9 +234,9 @@ export function ParentDashboard() {
       );
     }
 
-    // Pending fees from fee_payments
+    // Pending dues come from the ledger (student_fee_assignments), not the dead fee_payments table
     const { data: fees } = await supabase
-      .from("fee_payments")
+      .from("student_fee_assignments")
       .select("amount")
       .eq("school_id", schoolId)
       .eq("student_id", childId)
@@ -362,14 +362,14 @@ export function ParentDashboard() {
     const childId = child.id;  // exam_marks keys on students.id
     const { data } = await supabase
       .from("exam_marks")
-      .select("marks_obtained, exams:exam_id(subject, total_marks)")
+      .select("marks_obtained, subject, exams:exam_id(total_marks)")
       .eq("student_id", childId)
       .order("created_at", { ascending: false })
       .limit(10);
 
     if (data && data.length > 0) {
       const rows = data.map((r: any) => ({
-        subject: r.exams?.subject || "—",
+        subject: r.subject || "—",
         marks: r.marks_obtained || 0,
         maxMarks: r.exams?.total_marks || 100,
       }));

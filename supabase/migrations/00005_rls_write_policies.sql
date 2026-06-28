@@ -132,66 +132,71 @@ CREATE POLICY "Admins/Teachers can manage announcements" ON public.announcements
         school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'teacher'))
     );
 
+-- ==========================================================================
+-- The policies below target tables created by LATER migrations (fee_payments
+-- in 00010, certificates in 00016) or by the app-table consolidation in 00035.
+-- On a CLEAN deploy those tables don't exist yet when this migration runs, so
+-- each CREATE POLICY is guarded with to_regclass(...) — the owning migration
+-- (re)creates the policy. On an already-migrated DB this file is not re-run.
+-- ==========================================================================
+
 -- Leave Applications
-CREATE POLICY "Users can apply for leaves" ON public.leave_applications 
-    FOR INSERT WITH CHECK (
-        school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'teacher', 'staff'))
-    );
-
-CREATE POLICY "Users can modify own pending leaves" ON public.leave_applications 
-    FOR UPDATE USING (
-        user_id = auth.uid() AND status = 'pending'
-    );
-
-CREATE POLICY "Admins can review leave applications" ON public.leave_applications 
-    FOR UPDATE USING (
-        school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role = 'school_admin')
-    );
-
--- ==========================================
--- EXTRA MODULE TABLES FOR GOLD/PLATINUM PLANS
--- ==========================================
+DO $guard$ BEGIN
+  IF to_regclass('public.leave_applications') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Users can apply for leaves" ON public.leave_applications FOR INSERT WITH CHECK (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','teacher','staff')))$p$;
+    EXECUTE $p$CREATE POLICY "Users can modify own pending leaves" ON public.leave_applications FOR UPDATE USING (user_id = auth.uid() AND status = 'pending')$p$;
+    EXECUTE $p$CREATE POLICY "Admins can review leave applications" ON public.leave_applications FOR UPDATE USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role = 'school_admin'))$p$;
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL; END $guard$;
 
 -- Fees & Fee Payments
-CREATE POLICY "Admins can manage fees" ON public.fees 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role = 'school_admin'));
-
-CREATE POLICY "Admins can manage fee payments" ON public.fee_payments 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role = 'school_admin'));
+DO $guard$ BEGIN
+  IF to_regclass('public.fees') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins can manage fees" ON public.fees FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role = 'school_admin'))$p$;
+  END IF;
+  IF to_regclass('public.fee_payments') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins can manage fee payments" ON public.fee_payments FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role = 'school_admin'))$p$;
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL; END $guard$;
 
 -- Salaries & Payroll
-CREATE POLICY "Admins/Staff can manage salaries" ON public.salaries 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
-
-CREATE POLICY "Admins/Staff can manage payroll" ON public.payroll_payments 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
+DO $guard$ BEGIN
+  IF to_regclass('public.salaries') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage salaries" ON public.salaries FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+  IF to_regclass('public.payroll_payments') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage payroll" ON public.payroll_payments FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL; END $guard$;
 
 -- Transport (Vehicles, Routes, Allocations)
-CREATE POLICY "Admins/Staff can manage vehicles" ON public.vehicles 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
+DO $guard$ BEGIN
+  IF to_regclass('public.vehicles') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage vehicles" ON public.vehicles FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+  IF to_regclass('public.routes') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage routes" ON public.routes FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+  IF to_regclass('public.transport_allocations') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage transport allocations" ON public.transport_allocations FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL; END $guard$;
 
-CREATE POLICY "Admins/Staff can manage routes" ON public.routes 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
-
-CREATE POLICY "Admins/Staff can manage transport allocations" ON public.transport_allocations 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
-
--- Syllabus
-CREATE POLICY "Admins/Teachers can manage syllabus" ON public.syllabus 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'teacher')));
-
--- Documents
-CREATE POLICY "Admins/Staff can manage documents" ON public.documents 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
-
--- Certificates
-CREATE POLICY "Admins/Staff can manage certificates" ON public.certificates 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
-
--- Communications
-CREATE POLICY "Admins/Staff can manage communications" ON public.communications 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
-
--- Inventory
-CREATE POLICY "Admins/Staff can manage inventory" ON public.inventory_items 
-    FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin', 'staff')));
+-- Syllabus / Documents / Certificates / Communications / Inventory
+DO $guard$ BEGIN
+  IF to_regclass('public.syllabus') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Teachers can manage syllabus" ON public.syllabus FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','teacher')))$p$;
+  END IF;
+  IF to_regclass('public.documents') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage documents" ON public.documents FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+  IF to_regclass('public.certificates') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage certificates" ON public.certificates FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+  IF to_regclass('public.communications') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage communications" ON public.communications FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+  IF to_regclass('public.inventory_items') IS NOT NULL THEN
+    EXECUTE $p$CREATE POLICY "Admins/Staff can manage inventory" ON public.inventory_items FOR ALL USING (school_id IN (SELECT school_id FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('school_admin','staff')))$p$;
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL; END $guard$;

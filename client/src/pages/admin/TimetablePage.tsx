@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -119,7 +120,7 @@ export function TimetablePage() {
       
     } catch (error: any) {
       console.error("Error saving period:", error);
-      alert(`Failed to save: ${error.message}`);
+      toast.error(`Failed to save: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

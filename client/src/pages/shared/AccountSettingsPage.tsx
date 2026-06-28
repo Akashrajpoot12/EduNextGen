@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
-import { Camera, Mail, User, Shield, School, BookOpen, Phone, Calendar, CheckCircle, Loader2, Lock } from "lucide-react";
+import { Camera, Mail, User, Shield, School, BookOpen, Phone, Calendar, CheckCircle, Loader2, Lock, Hash } from "lucide-react";
 import { toast } from "sonner";
 
 export function AccountSettingsPage() {

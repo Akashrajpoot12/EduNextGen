@@ -1602,6 +1602,27 @@ export function SuperAdminDashboard() {
 
                         if (schoolErr) throw schoolErr;
 
+                        // Step 1.5: Create the admin LOGIN (auth user + users + user_roles=school_admin)
+                        // via the create-user edge function — without this the new admin cannot log in.
+                        const tempPassword = `Admin@${Math.random().toString(36).slice(-6)}${Math.floor(Math.random()*90+10)}`;
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const cuRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${session?.access_token}`,
+                            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+                          },
+                          body: JSON.stringify({
+                            email: adminEmail, password: tempPassword, name: adminName,
+                            school_id: newSchool.id, role: "school_admin", phone,
+                          }),
+                        });
+                        const cuData = await cuRes.json();
+                        if (!cuRes.ok || cuData.error) {
+                          throw new Error("School created, but admin login setup failed: " + (cuData.error || `HTTP ${cuRes.status}`));
+                        }
+
                         // Step 2: Also log in registration_requests as approved record
                         await supabase.from("registration_requests").insert({
                           school_name: schoolName, subdomain,
@@ -1615,7 +1636,7 @@ export function SuperAdminDashboard() {
                         await sendEmail(adminEmail, adminName, schoolName, subdomain, "approved", invData?.invite_token);
                         await logAction("SCHOOL_PROVISIONED", "school", newSchool?.id || "", schoolName, { subdomain, adminEmail });
 
-                        toast.success("School Provisioned! Admin email sent.", { id: toastId });
+                        toast.success(`School provisioned! Admin login → ${adminEmail} / ${tempPassword}`, { id: toastId, duration: 20000 });
                         e.currentTarget.reset();
                         fetchAll();
                         setActiveTab("schools");

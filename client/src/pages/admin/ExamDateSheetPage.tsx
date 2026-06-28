@@ -23,7 +23,7 @@ export function ExamDateSheetPage() {
   useEffect(() => {
     if (!schoolId) return;
     Promise.all([
-      supabase.from("exams").select("*").eq("school_id", schoolId).order("exam_date").order("start_time"),
+      supabase.from("exams").select("*").eq("school_id", schoolId).order("start_date"),
       supabase.from("classes").select("id, name").eq("school_id", schoolId).order("name"),
       supabase.from("schools").select("name, address").eq("id", schoolId).single(),
     ]).then(([eRes, cRes, schRes]) => {
@@ -49,9 +49,10 @@ export function ExamDateSheetPage() {
   // Group by date for date-sheet view
   const byDate: Record<string, Exam[]> = {};
   filtered.forEach(e => {
-    if (!e.exam_date) return;
-    if (!byDate[e.exam_date]) byDate[e.exam_date] = [];
-    byDate[e.exam_date].push(e);
+    const d = e.exam_date || e.start_date;
+    if (!d) return;
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(e);
   });
   const sortedDates = Object.keys(byDate).sort();
 

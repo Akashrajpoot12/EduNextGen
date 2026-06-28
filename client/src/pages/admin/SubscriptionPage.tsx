@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -22,11 +22,35 @@ const loadRazorpayScript = () => {
 
 export function SubscriptionPage() {
   const { tenantId: tenant } = useTenant();
+  const supabase = createClient();
 
   const [activePlan, setActivePlan] = useState<string>("basic");
   const [activeAddons, setActiveAddons] = useState<string[]>([]);
 
+  // Load the school's saved plan so it survives refresh.
+  useEffect(() => {
+    if (!tenant) return;
+    supabase.from("schools").select("subscription_plan").eq("id", tenant).single()
+      .then(({ data }) => {
+        if (data?.subscription_plan) setActivePlan(String(data.subscription_plan).toLowerCase());
+      });
+  }, [tenant]);
+
+  async function persistPlan(plan: string) {
+    try {
+      await supabase.from("schools")
+        .update({ subscription_plan: plan.toLowerCase(), subscription_status: "active" })
+        .eq("id", tenant);
+    } catch (e) {
+      console.error("Failed to persist plan", e);
+    }
+  }
+
   const handlePurchase = async (itemName: string, amount: number, isAddon: boolean = false) => {
+    if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+      toast.error("Payments not configured (missing Razorpay key). Contact support.");
+      return;
+    }
     const res = await loadRazorpayScript();
     if (!res) {
       toast.error("Razorpay SDK failed to load. Please check your connection.");
@@ -49,6 +73,10 @@ export function SubscriptionPage() {
         body: JSON.stringify({ amount, receiptNotes: { item: itemName, tenant } }),
       });
 
+      if (!response.ok) {
+        toast.error("Failed to create billing order (server error)", { id: toastId });
+        return;
+      }
       const order = await response.json();
 
       if (order.error) {
@@ -79,6 +107,10 @@ export function SubscriptionPage() {
                 tenant: tenant
               })
             });
+            if (!verifyResponse.ok) {
+              toast.error("Payment verification request failed.", { id: verifyToastId });
+              return;
+            }
             const verifyData = await verifyResponse.json();
 
             if (verifyData.success) {
@@ -87,6 +119,7 @@ export function SubscriptionPage() {
                 setActiveAddons((prev) => [...prev, itemName]);
               } else {
                 setActivePlan(itemName.toLowerCase());
+                await persistPlan(itemName);
               }
             } else {
               toast.error("Subscription verification failed! " + (verifyData.error || ""), { id: verifyToastId });

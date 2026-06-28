@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,7 @@ export function TeacherLeavesPage() {
       setIsDialogOpen(false);
       fetchLeaves(schoolId!);
     } catch (err: any) {
-      alert(`Failed: ${err.message}`);
+      toast.error(`Failed: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -80,7 +81,7 @@ export function TeacherLeavesPage() {
       setCancelId(null);
       fetchLeaves(schoolId!);
     } catch (err: any) {
-      alert(`Failed to cancel: ${err.message}`);
+      toast.error(`Failed to cancel: ${err.message}`);
     }
   }
 
